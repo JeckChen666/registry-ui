@@ -35,7 +35,6 @@
             }
         });
 
-        // Restore search value from DataTables state
         var savedSearch = reposTable.search();
         if (!savedSearch) {
             savedSearch = tagsTable.search();
@@ -45,7 +44,6 @@
             $('#clear-repos-search').show();
         }
 
-        // Single search box that searches both tables
         $('#repos-search').on('keyup', function() {
             var searchValue = this.value;
             reposTable.search(searchValue).draw();
@@ -60,7 +58,6 @@
             $(this).hide();
         });
 
-        // Initialize Bootstrap tooltips
         document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
             new bootstrap.Tooltip(el);
         });
@@ -74,36 +71,60 @@
                 btnCancelClass: 'btn-sm btn-secondary'
             });
         }
-        populateConfirmation()
-        $('#datatable_tags').on('draw.dt', populateConfirmation)
+        populateConfirmation();
+        $('#datatable_tags').on('draw.dt', populateConfirmation);
     });
 </script>
 {{end}}
 
 {{block body()}}
-<div class="d-flex gap-3 mb-3">
-    <nav aria-label="breadcrumb" class="flex-grow-1">
-        <ol class="breadcrumb rounded shadow-sm mb-0 h-100 d-flex align-items-center">
-            {{ yield breadcrumb() repoPath }}
-        </ol>
-    </nav>
-    <div class="position-relative" style="width: 300px;">
-        <input type="text" id="repos-search" class="form-control" placeholder="搜索...">
-        <button type="button" class="btn btn-link position-absolute top-50 end-0 translate-middle-y" id="clear-repos-search" style="display: none;">
-            <i class="bi bi-x-lg"></i>
-        </button>
+<section class="page-hero">
+    <div class="page-title-row">
+        <div class="page-eyebrow">Registry Explorer</div>
+        <h1 class="page-title">{{ if repoPath != "" }}{{ repoPath }}{{ else }}所有仓库{{ end }}</h1>
+        <p class="page-subtitle">
+            {{if repoPath != ""}}
+            浏览当前仓库路径下的子仓库、标签与近期活动。
+            {{else}}
+            浏览镜像仓库、检查标签状态并快速定位最近活动。
+            {{end}}
+        </p>
     </div>
-</div>
+    <div class="page-toolbar">
+        <nav aria-label="breadcrumb" class="page-toolbar-group page-toolbar-breadcrumb">
+            <ol class="breadcrumb mb-0">
+                {{ yield breadcrumb() repoPath }}
+            </ol>
+        </nav>
+        <div class="page-toolbar-group page-toolbar-search">
+            <label for="repos-search" class="visually-hidden">搜索仓库和标签</label>
+            <div class="search-input-wrap">
+                <i class="bi bi-search search-input-icon"></i>
+                <input type="text" id="repos-search" class="form-control form-control-app" placeholder="搜索仓库、标签或活动...">
+                <button type="button" class="btn btn-search-clear" id="clear-repos-search" style="display: none;">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
 
 {{if len(repos)>0 || !isCatalogReady}}
-<div class="card shadow-sm mb-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-        <h5 class="mb-0"><i class="bi bi-folder2 me-2"></i>仓库</h5>
+<section class="content-card">
+    <div class="content-card-header">
+        <div>
+            <div class="content-card-eyebrow">Repositories</div>
+            <h2 class="content-card-title">
+                <i class="bi bi-folder2"></i>
+                <span>仓库</span>
+            </h2>
+            <p class="content-card-subtitle">当前路径下的镜像仓库与标签计数。</p>
+        </div>
     </div>
-    <div class="card-body p-0">
+    <div class="content-card-body p-0">
         <div class="table-responsive">
-            <table id="datatable_repos" class="table table-hover table-striped mb-0">
-                <thead class="table-light">
+            <table id="datatable_repos" class="table table-app align-middle mb-0">
+                <thead>
                     <tr>
                         <th>仓库</th>
                         <th width="20%">标签数</th>
@@ -115,10 +136,15 @@
                         {{if !isset(tagCounts[full_repo_path]) || (isset(tagCounts[full_repo_path]) && tagCounts[full_repo_path] > 0)}}
                         <tr>
                             <td>
-                                <i class="bi bi-folder2 text-primary me-2"></i>
-                                <a href="{{ basePath }}/{{ full_repo_path }}" class="text-decoration-none fw-semibold">{{ repo }}</a>
+                                <div class="list-item-main">
+                                    <span class="list-item-icon"><i class="bi bi-folder2"></i></span>
+                                    <div>
+                                        <a href="{{ basePath }}/{{ full_repo_path }}" class="list-item-link">{{ repo }}</a>
+                                        <div class="list-item-meta">镜像仓库</div>
+                                    </div>
+                                </div>
                             </td>
-                            <td><span class="badge bg-secondary">{{ tagCounts[full_repo_path] }}</span></td>
+                            <td><span class="count-badge">{{ tagCounts[full_repo_path] }}</span></td>
                         </tr>
                         {{end}}
                     {{end}}
@@ -126,22 +152,28 @@
             </table>
         </div>
     </div>
-</div>
-{{end}} {* end repos *}
+</section>
+{{end}}
 
 {{if showTags}}
-<div class="card shadow-sm mb-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #65a30d 0%, #4d7c0f 100%); color: white;">
-        <h5 class="mb-0"><i class="bi bi-tags me-2"></i>标签
-            {{if tagsRefreshInfo != ""}}
-            <i class="bi bi-info-circle ms-2" style="font-size: 0.8rem; opacity: 0.8;" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="{{ tagsRefreshInfo }}"></i>
-            {{end}}
-        </h5>
+<section class="content-card">
+    <div class="content-card-header">
+        <div>
+            <div class="content-card-eyebrow">Tags</div>
+            <h2 class="content-card-title">
+                <i class="bi bi-tags"></i>
+                <span>标签</span>
+                {{if tagsRefreshInfo != ""}}
+                <i class="bi bi-info-circle text-muted" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="{{ tagsRefreshInfo }}"></i>
+                {{end}}
+            </h2>
+            <p class="content-card-subtitle">查看当前仓库下的可用标签并执行精细操作。</p>
+        </div>
     </div>
-    <div class="card-body p-0">
+    <div class="content-card-body p-0">
         <div class="table-responsive">
-            <table id="datatable_tags" class="table table-hover table-striped mb-0">
-                <thead class="table-light">
+            <table id="datatable_tags" class="table table-app align-middle mb-0">
+                <thead>
                     <tr>
                         <th>标签名称</th>
                     </tr>
@@ -150,10 +182,13 @@
                     {{range _, tag := tags}}
                     <tr>
                         <td>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <i class="bi bi-tag text-success me-2"></i>
-                                    <a href="{{ basePath }}/{{ repoPath }}:{{ tag }}" class="text-decoration-none fw-semibold">{{ tag }}</a>
+                            <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                                <div class="list-item-main">
+                                    <span class="list-item-icon"><i class="bi bi-tag"></i></span>
+                                    <div>
+                                        <a href="{{ basePath }}/{{ repoPath }}:{{ tag }}" class="list-item-link">{{ tag }}</a>
+                                        <div class="list-item-meta">镜像标签</div>
+                                    </div>
                                 </div>
                                 {{if deleteAllowed}}
                                 <a href="{{ basePath }}/__delete-tag?repoPath={{ repoPath }}&tag={{ tag }}"
@@ -171,18 +206,25 @@
             </table>
         </div>
     </div>
-</div>
-{{end}} {* end tags *}
+</section>
+{{end}}
 
 {{if eventsAllowed and isset(events) }}
-<div class="card shadow-sm mb-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
-        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>近期活动</h5>
+<section class="content-card">
+    <div class="content-card-header">
+        <div>
+            <div class="content-card-eyebrow">Activity</div>
+            <h2 class="content-card-title">
+                <i class="bi bi-clock-history"></i>
+                <span>近期活动</span>
+            </h2>
+            <p class="content-card-subtitle">最近的镜像 push、pull 与访问记录。</p>
+        </div>
     </div>
-    <div class="card-body p-0">
+    <div class="content-card-body p-0">
         <div class="table-responsive">
-            <table id="datatable_events" class="table table-hover table-striped mb-0">
-                <thead class="table-light">
+            <table id="datatable_events" class="table table-app align-middle mb-0">
+                <thead>
                     <tr>
                         <th>操作</th>
                         <th>镜像</th>
@@ -194,7 +236,7 @@
                 <tbody>
                     {{range _, e := events}}
                         <tr>
-                            <td><span class="badge bg-primary">{{ e.Action }}</span></td>
+                            <td><span class="count-badge">{{ e.Action }}</span></td>
                             {{if hasPrefix(e.Tag,"sha256:") }}
                             <td title="{{ e.Tag }}"><span class="small">{{ e.Repository }}@{{ e.Tag[:19] }}...</span></td>
                             {{else}}
@@ -209,7 +251,6 @@
             </table>
         </div>
     </div>
-</div>
+</section>
 {{end}}
-
 {{end}}

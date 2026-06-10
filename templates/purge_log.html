@@ -21,23 +21,32 @@
 {{end}}
 
 {{block body()}}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb rounded shadow-sm">
-        {{ yield breadcrumb() }}
-        <li class="breadcrumb-item active" aria-current="page"><strong>清理日志</strong></li>
-    </ol>
-</nav>
+<section class="page-hero">
+    <div class="page-title-row">
+        <div class="page-eyebrow">Maintenance</div>
+        <h1 class="page-title">清理日志</h1>
+        <p class="page-subtitle">审查历史清理任务的执行结果、影响范围与异常信息。</p>
+    </div>
+    <div class="page-toolbar">
+        <nav aria-label="breadcrumb" class="page-toolbar-group page-toolbar-breadcrumb">
+            <ol class="breadcrumb mb-0">
+                {{ yield breadcrumb() }}
+                <li class="breadcrumb-item active" aria-current="page"><strong>清理日志</strong></li>
+            </ol>
+        </nav>
+    </div>
+</section>
 
 {{if eventsAllowed}}
-<div class="alert alert-info shadow-sm" role="alert">
+<div class="app-alert app-alert-info">
     预计释放空间按待删镜像大小估算，真实磁盘回收量仍取决于 registry 垃圾回收和共享 layer 情况。
 </div>
 
-<div class="card shadow-sm">
-    <div class="card-body p-0">
+<section class="content-card">
+    <div class="content-card-body p-0">
         <div class="table-responsive">
-            <table id="purge-log-table" class="table table-hover table-striped mb-0">
-                <thead class="table-light">
+            <table id="purge-log-table" class="table table-app align-middle mb-0">
+                <thead>
                     <tr>
                         <th>开始时间</th>
                         <th>状态</th>
@@ -100,7 +109,7 @@
             </table>
         </div>
     </div>
-</div>
+</section>
 {{else}}
 <div class="alert alert-warning text-center" role="alert">
     <i class="bi bi-exclamation-triangle fs-1"></i>

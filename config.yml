@@ -1,117 +1,116 @@
-# Listen interface.
+# 监听地址。
 listen_addr: 0.0.0.0:8000
 
-# Base path of Registry UI.
+# Registry UI 的基础路径。
 uri_base_path: /
 
-# Background tasks.
+# 后台任务。
 performance:
-  # Catalog list page size. It depends from the underlying storage performance.
+  # 仓库目录列表分页大小，取决于底层存储性能。
   catalog_page_size: 100
 
-  # Catalog (repo list) refresh interval in minutes.
-  # If set to 0 it will never refresh but will run once initially.
+  # 仓库目录（repo 列表）后台刷新间隔，单位为分钟。
+  # 设为 0 时不会周期刷新，但启动后仍会先执行一次初始化加载。
   catalog_refresh_interval: 60
 
-  # Tags refresh interval in minutes (background job that caches all tags).
-  # If set to 0, background refresh is disabled and tags will always be
-  # refreshed online when browsing (ignoring tags_online_refresh_max_count).
+  # 标签后台刷新间隔，单位为分钟（该任务会缓存所有标签）。
+  # 设为 0 时禁用后台刷新，浏览时会始终在线刷新标签，
+  # 并忽略 tags_online_refresh_max_count 设置。
   tags_async_refresh_interval: 360
 
-  # Max tags per repo to allow refreshing tags online when browsing.
-  # If repo has fewer tags than this limit, tags will be fetched fresh on page load.
-  # If repo has more tags, it will use cached tags from background job.
-  # Set to 0 to always use cache (no online refresh).
-  # Note: This setting is ignored when tags_async_refresh_interval=0 so you can ever browse tags.
+  # 浏览时允许在线刷新标签的单仓库最大标签数。
+  # 如果仓库标签数低于这个阈值，页面加载时会实时拉取最新标签。
+  # 如果超过这个阈值，则使用后台任务缓存的标签。
+  # 设为 0 表示始终使用缓存（不在线刷新）。
+  # 注意：当 tags_async_refresh_interval=0 时，此设置会被忽略。
   tags_online_refresh_max_count: 1000
 
-# Registry endpoint and authentication.
+# Registry 端点与认证配置。
 registry:
-  # Registry hostname (without protocol but may include port).
+  # Registry 主机名（不含协议，但可以包含端口）。
   hostname: docker-registry.local
-  # Allow to access non-https enabled registry.
+  # 是否允许访问未启用 HTTPS 的 Registry。
   insecure: false
 
-  # Registry credentials.
-  # They need to have a full access to the registry.
-  # If token authentication service is enabled, it will be auto-discovered and those credentials
-  # will be used to obtain access tokens.
+  # Registry 访问凭据。
+  # 这些凭据需要具备对 Registry 的完整访问权限。
+  # 如果启用了 token 认证服务，会自动发现并使用这些凭据换取访问令牌。
   username: user
   password: pass
-  # Set password to '' in order to read it from the file below. Otherwise, it is ignored.
+  # 将 password 设为空字符串后，会从下面的文件中读取密码；否则此项会被忽略。
   password_file: /run/secrets/registry_password_file
 
-  # Alternatively, you can do auth with Keychain, useful for local development.
-  # When enabled the above credentials will not be used.
+  # 也可以通过 Keychain 进行认证，适合本地开发场景。
+  # 启用后，上面的用户名和密码不会被使用。
   auth_with_keychain: false
 
-# UI access management.
+# UI 访问控制。
 access_control:
-  # Whether users can the event log. Otherwise, only admins listed below.
+  # 是否允许所有用户查看事件日志；否则仅限下方管理员列表中的用户。
   anyone_can_view_events: true
-  # Whether users can delete tags. Otherwise, only admins listed below.
+  # 是否允许所有用户删除标签；否则仅限下方管理员列表中的用户。
   anyone_can_delete_tags: false
-  # The list of users to do everything.
-  # User identifier should be set via X-WEBAUTH-USER header from your proxy
-  # because registry UI itself does not employ any auth.
+  # 拥有全部权限的用户列表。
+  # 用户标识应由前置代理通过 X-WEBAUTH-USER 请求头传入，
+  # 因为 Registry UI 自身默认不承担认证职责。
   admins: []
 
-# Event listener configuration.
+# 事件监听器配置。
 event_listener:
-  # The same token should be configured on Docker registry as Authorization Bearer token.
+  # 这里的令牌需要与 Docker Registry 中配置的 Authorization Bearer token 保持一致。
   bearer_token: xxx
-  # Retention of records to keep.
+  # 事件记录保留天数。
   retention_days: 7
 
-  # Event listener storage.
+  # 事件监听器存储配置。
   database_driver: sqlite3
   database_location: data/registry_events.db
   # database_driver: mysql
   # database_location: user:password@tcp(localhost:3306)/docker_events
 
-  # You can disable event deletion on some hosts when you are running registry UI on MySQL master-master or
-  # cluster setup to avoid deadlocks or replication breaks.
+  # 如果在 MySQL 主主或集群环境中运行 Registry UI，
+  # 可以在部分节点关闭事件删除，以避免死锁或复制异常。
   deletion_enabled: true
 
-# Options for tag purging.
+# 标签清理配置。
 purge_tags:
-  # Built-in cron schedule for automatic purge, e.g. "10 3 * * *".
-  # Empty string disables the built-in scheduler.
+  # 内置定时清理任务的 cron 表达式，例如 "10 3 * * *"。
+  # 设为空字符串表示禁用内置调度器。
   cron: ''
 
-  # Whether scheduled purge should run in dry-run mode.
+  # 定时清理是否以 dry-run 模式执行。
   dry_run: false
 
-  # Retention of purge execution logs in days. Set to 0 to keep forever.
+  # 清理执行日志保留天数，设为 0 表示永久保留。
   log_retention_days: 30
 
-  # How many days to keep tags but also keep the minimal count provided no matter how old.
+  # 标签保留天数，同时无论标签多旧，都至少保留 keep_count 指定的数量。
   keep_days: 90
   keep_count: 10
 
-  # Keep tags matching regexp no matter how old, e.g. '^latest$'
-  # Empty string disables this feature.
+  # 无论标签多旧，都保留匹配该正则表达式的标签，例如 '^latest$'。
+  # 设为空字符串表示禁用此功能。
   keep_regexp: ''
 
-  # Keep tags listed in the file no matter how old.
-  # File format is JSON: {"repo1": ["tag1", "tag2"], "repoX": ["tagX"]}
-  # Empty string disables this feature.
+  # 无论标签多旧，都保留文件中列出的标签。
+  # 文件格式为 JSON：{"repo1": ["tag1", "tag2"], "repoX": ["tagX"]}
+  # 设为空字符串表示禁用此功能。
   keep_from_file: ''
 
-# UI authentication.
-# When enabled, users must log in with username/password to access the UI.
+# UI 登录认证。
+# 启用后，用户必须使用用户名和密码登录后才能访问界面。
 auth:
   enabled: false
   username: admin
   password: changeme
-  # Secret key used to sign session cookies. Change this to a random string.
+  # 用于签名 session cookie 的密钥，请改成随机字符串。
   secret: "change-me-to-a-random-string"
-  # Brute-force protection: max failed attempts before lockout (0 to disable).
+  # 暴力破解防护：达到锁定前允许的最大失败次数（设为 0 表示禁用）。
   max_attempts: 5
-  # Lockout duration in minutes after exceeding max_attempts.
+  # 超过 max_attempts 后的锁定时长，单位为分钟。
   lockout_minutes: 15
 
-# Debug mode.
+# 调试模式。
 debug:
-  # Affects only templates.
+  # 仅影响模板相关行为。
   templates: false

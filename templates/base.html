@@ -12,101 +12,107 @@
         <script type="text/javascript" src="{{ basePath }}/static/js/datatables.min.js"></script>
         {{yield head()}}
     </head>
-    <body class="d-flex flex-column min-vh-100">
-        <!-- Navigation Header -->
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-            <div class="container">
-                <a class="navbar-brand" href="{{ basePath }}/">
-                    <i class="bi-journals fs-4 me-2"></i>
-                    <span class="fw-bold">Registry UI</span>
-                </a>
-                <ul class="navbar-nav ms-auto">
-                    {{if eventsAllowed}}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ basePath }}/__event-log">
-                            <i class="bi-calendar-week me-1"></i> <strong>事件日志</strong>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ basePath }}/__purge-log">
-                            <i class="bi-trash3 me-1"></i> <strong>清理日志</strong>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ basePath }}/__statistics">
-                            <i class="bi-bar-chart me-1"></i> <strong>统计信息</strong>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ basePath }}/__options">
-                            <i class="bi-gear me-1"></i> <strong>配置选项</strong>
-                        </a>
-                    </li>
-                    {{end}}
-                    <li class="nav-item">
-                        <button class="btn btn-link nav-link" id="darkModeToggle" aria-label="切换暗色模式">
-                            <i class="bi-moon-stars-fill" id="darkModeIcon"></i>
-                        </button>
-                    </li>
-                    {{if user}}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ basePath }}/logout" title="退出登录 ({{user}})">
-                            <i class="bi-box-arrow-right me-1"></i> <strong>退出登录</strong>
-                        </a>
-                    </li>
-                    {{end}}
-                </ul>
-            </div>
-        </nav>
-
-        <!-- Main Content -->
-        <main class="container my-4 flex-grow-1">
-            {{yield body()}}
-        </main>
-
-        <!-- Footer -->
-        <footer class="bg-light border-top py-3 mt-auto">
-            <div class="container">
-                <div class="text-center text-muted small">
-                    Registry UI v{{version}} |
-                    <a href="https://quiq.com" target="_blank" class="text-decoration-none">Quiq Inc.</a> |
-                    <a href="https://github.com/Quiq/registry-ui" target="_blank" class="text-decoration-none">
-                        <i class="bi-github"></i> GitHub
+    <body class="app-body">
+        <div class="app-shell">
+            <header class="app-header">
+                <div class="container app-header-inner">
+                    <a class="app-brand" href="{{ basePath }}/">
+                        <span class="app-brand-mark"><i class="bi bi-box-seam"></i></span>
+                        <span class="app-brand-copy">
+                            <span class="app-brand-title">Registry UI</span>
+                            <span class="app-brand-subtitle">Container Registry Console</span>
+                        </span>
                     </a>
+                    <nav class="app-nav" aria-label="Primary">
+                        {{if eventsAllowed}}
+                        <a class="app-nav-link" href="{{ basePath }}/__event-log">
+                            <i class="bi bi-activity"></i>
+                            <span>事件日志</span>
+                        </a>
+                        <a class="app-nav-link" href="{{ basePath }}/__purge-log">
+                            <i class="bi bi-trash3"></i>
+                            <span>清理日志</span>
+                        </a>
+                        <a class="app-nav-link" href="{{ basePath }}/__statistics">
+                            <i class="bi bi-bar-chart"></i>
+                            <span>统计信息</span>
+                        </a>
+                        <a class="app-nav-link" href="{{ basePath }}/__options">
+                            <i class="bi bi-sliders"></i>
+                            <span>配置选项</span>
+                        </a>
+                        {{end}}
+                    </nav>
+                    <div class="app-header-actions">
+                        <button class="btn btn-app-icon" id="darkModeToggle" aria-label="切换暗色模式" type="button">
+                            <i class="bi bi-moon-stars-fill" id="darkModeIcon"></i>
+                        </button>
+                        {{if user}}
+                        <a class="btn btn-app-ghost" href="{{ basePath }}/logout" title="退出登录 ({{user}})">
+                            <i class="bi bi-box-arrow-right"></i>
+                            <span>退出登录</span>
+                        </a>
+                        {{end}}
+                    </div>
                 </div>
-            </div>
-        </footer>
+            </header>
+
+            <main class="app-main flex-grow-1">
+                <div class="container">
+                    <div class="app-content">
+                        {{yield body()}}
+                    </div>
+                </div>
+            </main>
+
+            <footer class="app-footer">
+                <div class="container">
+                    <div class="app-footer-inner">
+                        <div class="app-footer-copy">Registry UI v{{version}}</div>
+                        <div class="app-footer-links">
+                            <a href="https://quiq.com" target="_blank" class="text-decoration-none">Quiq Inc.</a>
+                            <a href="https://github.com/Quiq/registry-ui" target="_blank" class="text-decoration-none">
+                                <i class="bi bi-github"></i>
+                                <span>GitHub</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
 
         <script type="text/javascript" src="{{ basePath }}/static/js/bootstrap.bundle.min.js"></script>
         <script type="text/javascript">
-            // Dark Mode Toggle
             (function() {
                 const html = document.documentElement;
                 const toggle = document.getElementById('darkModeToggle');
                 const icon = document.getElementById('darkModeIcon');
+                const navLinks = document.querySelectorAll('.app-nav-link');
+                const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
 
-                // Load saved theme preference or default to light
                 const savedTheme = localStorage.getItem('theme') || 'light';
                 html.setAttribute('data-bs-theme', savedTheme);
                 updateIcon(savedTheme);
 
-                // Toggle dark mode
-                toggle.addEventListener('click', function() {
-                    const currentTheme = html.getAttribute('data-bs-theme');
-                    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-
-                    html.setAttribute('data-bs-theme', newTheme);
-                    localStorage.setItem('theme', newTheme);
-                    updateIcon(newTheme);
+                navLinks.forEach(function(link) {
+                    const linkPath = new URL(link.href, window.location.origin).pathname.replace(/\/+$/, '') || '/';
+                    if (linkPath === currentPath) {
+                        link.classList.add('is-active');
+                    }
                 });
 
-                // Update icon based on theme
+                if (toggle) {
+                    toggle.addEventListener('click', function() {
+                        const currentTheme = html.getAttribute('data-bs-theme');
+                        const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+                        html.setAttribute('data-bs-theme', nextTheme);
+                        localStorage.setItem('theme', nextTheme);
+                        updateIcon(nextTheme);
+                    });
+                }
+
                 function updateIcon(theme) {
-                    if (theme === 'dark') {
-                        icon.className = 'bi-sun-fill';
-                    } else {
-                        icon.className = 'bi-moon-stars-fill';
-                    }
+                    icon.className = theme === 'dark' ? 'bi-sun-fill' : 'bi-moon-stars-fill';
                 }
             })();
         </script>

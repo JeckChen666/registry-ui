@@ -3,82 +3,80 @@
 {{import "json_to_table.html"}}
 
 {{block head()}}
-<style>
-    /* col 0 style */
-    td:nth-child(1) {
-        text-align: right;
-    }
-    /* td: long line wrap */
-    td {
-        word-break: break-word;
-    }
-</style>
 {{end}}
 
 {{block body()}}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb rounded shadow-sm">
-        {{ yield breadcrumb() ii.ImageRefRepo }}
-        <li class="breadcrumb-item"><a href="{{ basePath }}/{{ repoPath }}" class="text-decoration-none">{{ ii.ImageRefTag }}</a></li>
-    </ol>
-</nav>
-
-<div class="mb-4">
-    <h3 class="d-flex align-items-center">
-        {{if ii.IsImage}}<i class="bi-file-earmark text-primary me-3" style="font-size: 2.5rem;"></i><span>镜像详情</span>{{end}}
-        {{if ii.IsImageIndex}}<i class="bi-files text-primary me-3" style="font-size: 2.5rem;"></i><span>镜像索引详情</span>{{end}}
-    </h3>
-</div>
-
-<div class="card shadow-sm mb-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>概要信息</h5>
+<section class="page-hero">
+    <div class="page-title-row">
+        <div class="page-eyebrow">Artifact Details</div>
+        <h1 class="page-title">{{if ii.IsImage}}镜像详情{{end}}{{if ii.IsImageIndex}}镜像索引详情{{end}}</h1>
+        <p class="page-subtitle">查看镜像引用、摘要、平台信息以及底层 manifest 和配置内容。</p>
     </div>
-    <div class="card-body p-0">
+    <div class="page-toolbar">
+        <nav aria-label="breadcrumb" class="page-toolbar-group page-toolbar-breadcrumb">
+            <ol class="breadcrumb mb-0">
+                {{ yield breadcrumb() ii.ImageRefRepo }}
+                <li class="breadcrumb-item"><a href="{{ basePath }}/{{ repoPath }}" class="breadcrumb-link">{{ ii.ImageRefTag }}</a></li>
+            </ol>
+        </nav>
+    </div>
+</section>
+
+<section class="content-card">
+    <div class="content-card-header">
+        <div>
+            <div class="content-card-eyebrow">Overview</div>
+            <h2 class="content-card-title">
+                <i class="bi bi-info-circle"></i>
+                <span>概要信息</span>
+            </h2>
+        </div>
+    </div>
+    <div class="content-card-body p-0">
         <div class="table-responsive">
-            <table class="table table-striped mb-0">
+            <table class="table table-app table-striped detail-table mb-0">
                 <tbody>
                     <tr>
-                        <td width="20%" class="fw-bold text-muted">镜像引用</td>
+                        <td class="fw-bold text-muted detail-key">镜像引用</td>
                         <td><code>{{ registryHost }}/{{ repoPath }}</code></td>
                     </tr>
                     <tr>
-                        <td class="fw-bold text-muted">摘要</td>
+                        <td class="fw-bold text-muted detail-key">摘要</td>
                         <td>
-                            <a href="{{ basePath }}/{{ ii.ImageRefRepo }}@{{ ii.ImageRefDigest }}" class="text-decoration-none">
+                            <a href="{{ basePath }}/{{ ii.ImageRefRepo }}@{{ ii.ImageRefDigest }}" class="list-item-link">
                                 <code class="small">{{ ii.ImageRefDigest }}</code>
                             </a>
                         </td>
                     </tr>
                     <tr>
-                        <td class="fw-bold text-muted">媒体类型</td>
+                        <td class="fw-bold text-muted detail-key">媒体类型</td>
                         <td><span class="badge bg-secondary">{{ ii.MediaType }}</span></td>
                     </tr>
                     {{if ii.IsImageIndex}}
                     <tr>
-                        <td class="fw-bold text-muted">子镜像</td>
+                        <td class="fw-bold text-muted detail-key">子镜像</td>
                         <td><span class="badge bg-info">{{ len(ii.Manifest["manifests"]) }}</span></td>
                     </tr>
                     <tr>
-                        <td class="fw-bold text-muted">平台</td>
+                        <td class="fw-bold text-muted detail-key">平台</td>
                         <td><code class="small">{{ ii.Platforms }}</code></td>
                     </tr>
                     {{end}}
                     {{if ii.IsImage}}
                     <tr>
-                        <td class="fw-bold text-muted">镜像 ID</td>
+                        <td class="fw-bold text-muted detail-key">镜像 ID</td>
                         <td><code class="small">{{ ii.ConfigImageID }}</code></td>
                     </tr>
                     <tr>
-                        <td class="fw-bold text-muted">镜像大小</td>
+                        <td class="fw-bold text-muted detail-key">镜像大小</td>
                         <td><span class="badge bg-success">{{ ii.ImageSize|pretty_size }}</span></td>
                     </tr>
                     <tr>
-                        <td class="fw-bold text-muted">平台</td>
+                        <td class="fw-bold text-muted detail-key">平台</td>
                         <td><code class="small">{{ ii.Platforms }}</code></td>
                     </tr>
                     <tr>
-                        <td class="fw-bold text-muted">创建时间</td>
+                        <td class="fw-bold text-muted detail-key">创建时间</td>
                         <td><span class="text-muted">{{ ii.Created|pretty_time }}</span></td>
                     </tr>
                     {{end}}
@@ -86,26 +84,37 @@
             </table>
         </div>
     </div>
-</div>
+</section>
 
-<div class="card shadow-sm mb-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-        <h5 class="mb-0" style="color: #333;"><i class="bi bi-file-code me-2"></i>{{if ii.IsImage}}清单{{else}}索引清单{{end}}</h5>
+<section class="content-card">
+    <div class="content-card-header">
+        <div>
+            <div class="content-card-eyebrow">Manifest</div>
+            <h2 class="content-card-title">
+                <i class="bi bi-file-code"></i>
+                <span>{{if ii.IsImage}}清单{{else}}索引清单{{end}}</span>
+            </h2>
+        </div>
     </div>
-    <div class="card-body p-0">
+    <div class="content-card-body p-0">
         {{ yield json_to_table() ii.Manifest }}
     </div>
-</div>
+</section>
 
 {{if ii.IsImage}}
-<div class="card shadow-sm mb-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-        <h5 class="mb-0" style="color: #333;"><i class="bi bi-gear me-2"></i>配置文件</h5>
+<section class="content-card">
+    <div class="content-card-header">
+        <div>
+            <div class="content-card-eyebrow">Config</div>
+            <h2 class="content-card-title">
+                <i class="bi bi-gear"></i>
+                <span>配置文件</span>
+            </h2>
+        </div>
     </div>
-    <div class="card-body p-0">
+    <div class="content-card-body p-0">
         {{ yield json_to_table() ii.ConfigFile }}
     </div>
-</div>
+</section>
 {{end}}
-
 {{end}}
