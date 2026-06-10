@@ -7,9 +7,9 @@
 
   $.fn.confirmationPopover = function(options) {
     var defaults = {
-      title: 'Are you sure?',
-      btnOkText: 'Yes',
-      btnCancelText: 'No',
+      title: '确认操作？',
+      btnOkText: '确认',
+      btnCancelText: '取消',
       btnOkClass: 'btn-sm btn-danger',
       btnCancelClass: 'btn-sm btn-secondary',
       placement: 'left',

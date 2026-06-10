@@ -8,7 +8,7 @@
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb rounded shadow-sm">
         {{ yield breadcrumb() }}
-        <li class="breadcrumb-item active" aria-current="page"><strong>Statistics</strong></li>
+        <li class="breadcrumb-item active" aria-current="page"><strong>统计信息</strong></li>
     </ol>
 </nav>
 
@@ -17,13 +17,13 @@
     <div class="col-md-4">
         <div class="card shadow-sm text-center">
             <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                <h5 class="mb-0"><i class="bi bi-folder2 me-2"></i>Repositories</h5>
+                <h5 class="mb-0"><i class="bi bi-folder2 me-2"></i>仓库</h5>
             </div>
             <div class="card-body py-4">
                 {{if repoCount > 0}}
                 <h1 class="display-4 fw-bold text-primary">{{ repoCount }}</h1>
                 {{else}}
-                <p class="text-muted mb-0">Loading in the background...</p>
+                <p class="text-muted mb-0">后台加载中...</p>
                 {{end}}
             </div>
         </div>
@@ -31,13 +31,13 @@
     <div class="col-md-4">
         <div class="card shadow-sm text-center">
             <div class="card-header" style="background: linear-gradient(135deg, #65a30d 0%, #4d7c0f 100%); color: white;">
-                <h5 class="mb-0"><i class="bi bi-tags me-2"></i>Tags</h5>
+                <h5 class="mb-0"><i class="bi bi-tags me-2"></i>标签</h5>
             </div>
             <div class="card-body py-4">
                 {{if tagCount > 0}}
                 <h1 class="display-4 fw-bold text-success">{{ tagCount }}</h1>
                 {{else}}
-                <p class="text-muted mb-0">Loading in the background...</p>
+                <p class="text-muted mb-0">后台加载中...</p>
                 {{end}}
             </div>
         </div>
@@ -45,7 +45,7 @@
     <div class="col-md-4">
         <div class="card shadow-sm text-center">
             <div class="card-header" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
-                <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Event Log Entries</h5>
+                <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>事件日志条目</h5>
             </div>
             <div class="card-body py-4">
                 <h1 class="display-4 fw-bold text-info">{{ eventCount }}</h1>
@@ -56,35 +56,35 @@
 
 <div class="card shadow-sm mt-4">
     <div class="card-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
-        <h5 class="mb-0"><i class="bi bi-arrow-repeat me-2"></i>Background Jobs</h5>
+        <h5 class="mb-0"><i class="bi bi-arrow-repeat me-2"></i>后台任务</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Job</th>
-                        <th>Last Run</th>
-                        <th>Duration</th>
+                        <th>任务</th>
+                        <th>上次运行</th>
+                        <th>耗时</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><i class="bi bi-folder2 text-primary me-2"></i>Catalog Refresh</td>
+                        <td><i class="bi bi-folder2 text-primary me-2"></i>目录刷新</td>
                         {{if !catalogJobInfo.LastRun.IsZero()}}
                         <td><span class="text-muted small">{{ catalogJobInfo.LastRun|pretty_time }}</span></td>
                         <td><span class="badge bg-secondary">{{ catalogJobInfo.Duration|pretty_duration }}</span></td>
                         {{else}}
-                        <td colspan="2"><span class="text-muted small">Not yet run</span></td>
+                        <td colspan="2"><span class="text-muted small">尚未运行</span></td>
                         {{end}}
                     </tr>
                     <tr>
-                        <td><i class="bi bi-tags text-success me-2"></i>Tags Refresh</td>
+                        <td><i class="bi bi-tags text-success me-2"></i>标签刷新</td>
                         {{if !tagsJobInfo.LastRun.IsZero()}}
                         <td><span class="text-muted small">{{ tagsJobInfo.LastRun|pretty_time }}</span></td>
                         <td><span class="badge bg-secondary">{{ tagsJobInfo.Duration|pretty_duration }}</span></td>
                         {{else}}
-                        <td colspan="2"><span class="text-muted small">Not yet run</span></td>
+                        <td colspan="2"><span class="text-muted small">尚未运行</span></td>
                         {{end}}
                     </tr>
                 </tbody>
@@ -96,7 +96,7 @@
 {{if len(topRepos) > 0}}
 <div class="card shadow-sm mt-4">
     <div class="card-header" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-        <h5 class="mb-0" style="color: #333;"><i class="bi bi-trophy me-2"></i>Top 10 Repositories by Tag Count</h5>
+        <h5 class="mb-0" style="color: #333;"><i class="bi bi-trophy me-2"></i>标签数量 Top 10 仓库</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -104,8 +104,8 @@
                 <thead class="table-light">
                     <tr>
                         <th width="5%">#</th>
-                        <th>Repository</th>
-                        <th width="15%">Tags</th>
+                        <th>仓库</th>
+                        <th width="15%">标签</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -128,8 +128,8 @@
 {{else}}
 <div class="alert alert-warning text-center" role="alert">
     <i class="bi bi-exclamation-triangle fs-1"></i>
-    <h4 class="mt-3">Access Denied</h4>
-    <p>User "{{user}}" is not permitted to view Statistics.</p>
+    <h4 class="mt-3">访问被拒绝</h4>
+    <p>用户 "{{user}}" 无权查看统计信息。</p>
 </div>
 {{end}}
 {{end}}

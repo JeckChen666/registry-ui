@@ -25,25 +25,25 @@
 
 <div class="mb-4">
     <h3 class="d-flex align-items-center">
-        {{if ii.IsImage}}<i class="bi-file-earmark text-primary me-3" style="font-size: 2.5rem;"></i><span>Image Details</span>{{end}}
-        {{if ii.IsImageIndex}}<i class="bi-files text-primary me-3" style="font-size: 2.5rem;"></i><span>Image Index Details</span>{{end}}
+        {{if ii.IsImage}}<i class="bi-file-earmark text-primary me-3" style="font-size: 2.5rem;"></i><span>镜像详情</span>{{end}}
+        {{if ii.IsImageIndex}}<i class="bi-files text-primary me-3" style="font-size: 2.5rem;"></i><span>镜像索引详情</span>{{end}}
     </h3>
 </div>
 
 <div class="card shadow-sm mb-4">
     <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Summary</h5>
+        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>概要信息</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-striped mb-0">
                 <tbody>
                     <tr>
-                        <td width="20%" class="fw-bold text-muted">Image Reference</td>
+                        <td width="20%" class="fw-bold text-muted">镜像引用</td>
                         <td><code>{{ registryHost }}/{{ repoPath }}</code></td>
                     </tr>
                     <tr>
-                        <td class="fw-bold text-muted">Digest</td>
+                        <td class="fw-bold text-muted">摘要</td>
                         <td>
                             <a href="{{ basePath }}/{{ ii.ImageRefRepo }}@{{ ii.ImageRefDigest }}" class="text-decoration-none">
                                 <code class="small">{{ ii.ImageRefDigest }}</code>
@@ -51,34 +51,34 @@
                         </td>
                     </tr>
                     <tr>
-                        <td class="fw-bold text-muted">Media Type</td>
+                        <td class="fw-bold text-muted">媒体类型</td>
                         <td><span class="badge bg-secondary">{{ ii.MediaType }}</span></td>
                     </tr>
                     {{if ii.IsImageIndex}}
                     <tr>
-                        <td class="fw-bold text-muted">Sub-Images</td>
+                        <td class="fw-bold text-muted">子镜像</td>
                         <td><span class="badge bg-info">{{ len(ii.Manifest["manifests"]) }}</span></td>
                     </tr>
                     <tr>
-                        <td class="fw-bold text-muted">Platforms</td>
+                        <td class="fw-bold text-muted">平台</td>
                         <td><code class="small">{{ ii.Platforms }}</code></td>
                     </tr>
                     {{end}}
                     {{if ii.IsImage}}
                     <tr>
-                        <td class="fw-bold text-muted">Image ID</td>
+                        <td class="fw-bold text-muted">镜像 ID</td>
                         <td><code class="small">{{ ii.ConfigImageID }}</code></td>
                     </tr>
                     <tr>
-                        <td class="fw-bold text-muted">Image Size</td>
+                        <td class="fw-bold text-muted">镜像大小</td>
                         <td><span class="badge bg-success">{{ ii.ImageSize|pretty_size }}</span></td>
                     </tr>
                     <tr>
-                        <td class="fw-bold text-muted">Platform</td>
+                        <td class="fw-bold text-muted">平台</td>
                         <td><code class="small">{{ ii.Platforms }}</code></td>
                     </tr>
                     <tr>
-                        <td class="fw-bold text-muted">Created On</td>
+                        <td class="fw-bold text-muted">创建时间</td>
                         <td><span class="text-muted">{{ ii.Created|pretty_time }}</span></td>
                     </tr>
                     {{end}}
@@ -90,7 +90,7 @@
 
 <div class="card shadow-sm mb-4">
     <div class="card-header" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-        <h5 class="mb-0" style="color: #333;"><i class="bi bi-file-code me-2"></i>{{if ii.IsImage}}Manifest{{else}}Index Manifest{{end}}</h5>
+        <h5 class="mb-0" style="color: #333;"><i class="bi bi-file-code me-2"></i>{{if ii.IsImage}}清单{{else}}索引清单{{end}}</h5>
     </div>
     <div class="card-body p-0">
         {{ yield json_to_table() ii.Manifest }}
@@ -100,7 +100,7 @@
 {{if ii.IsImage}}
 <div class="card shadow-sm mb-4">
     <div class="card-header" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-        <h5 class="mb-0" style="color: #333;"><i class="bi bi-gear me-2"></i>Config File</h5>
+        <h5 class="mb-0" style="color: #333;"><i class="bi bi-gear me-2"></i>配置文件</h5>
     </div>
     <div class="card-body p-0">
         {{ yield json_to_table() ii.ConfigFile }}

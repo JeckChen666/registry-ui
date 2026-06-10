@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="zh" data-bs-theme="light">
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -24,29 +24,29 @@
                     {{if eventsAllowed}}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ basePath }}/__event-log">
-                            <i class="bi-calendar-week me-1"></i> <strong>Event Log</strong>
+                            <i class="bi-calendar-week me-1"></i> <strong>事件日志</strong>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ basePath }}/__statistics">
-                            <i class="bi-bar-chart me-1"></i> <strong>Statistics</strong>
+                            <i class="bi-bar-chart me-1"></i> <strong>统计信息</strong>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ basePath }}/__options">
-                            <i class="bi-gear me-1"></i> <strong>Options</strong>
+                            <i class="bi-gear me-1"></i> <strong>配置选项</strong>
                         </a>
                     </li>
                     {{end}}
                     <li class="nav-item">
-                        <button class="btn btn-link nav-link" id="darkModeToggle" aria-label="Toggle dark mode">
+                        <button class="btn btn-link nav-link" id="darkModeToggle" aria-label="切换暗色模式">
                             <i class="bi-moon-stars-fill" id="darkModeIcon"></i>
                         </button>
                     </li>
                     {{if user}}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ basePath }}/logout" title="Logout ({{user}})">
-                            <i class="bi-box-arrow-right me-1"></i> <strong>Logout</strong>
+                        <a class="nav-link" href="{{ basePath }}/logout" title="退出登录 ({{user}})">
+                            <i class="bi-box-arrow-right me-1"></i> <strong>退出登录</strong>
                         </a>
                     </li>
                     {{end}}

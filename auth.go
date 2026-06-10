@@ -153,7 +153,7 @@ func loginHandler(c echo.Context) error {
 			if lockoutMin <= 0 {
 				lockoutMin = 15
 			}
-			data.Set("error", fmt.Sprintf("Too many failed attempts. Please try again in %d minutes.", lockoutMin))
+			data.Set("error", fmt.Sprintf("登录失败次数过多，请在 %d 分钟后重试。", lockoutMin))
 			return c.Render(http.StatusOK, "login.html", data)
 		}
 
@@ -176,7 +176,7 @@ func loginHandler(c echo.Context) error {
 
 		recordFailure(ip)
 		_, remaining := checkRateLimit(ip)
-		data.Set("error", fmt.Sprintf("Invalid username or password. %d attempts remaining.", remaining))
+		data.Set("error", fmt.Sprintf("用户名或密码错误，剩余 %d 次尝试机会。", remaining))
 	}
 
 	return c.Render(http.StatusOK, "login.html", data)
