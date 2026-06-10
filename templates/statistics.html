@@ -93,6 +93,56 @@
     </div>
 </div>
 
+<div class="card shadow-sm mt-4">
+    <div class="card-header" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: #333;">
+        <h5 class="mb-0"><i class="bi bi-trash3 me-2"></i>定时清理任务</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <div class="text-muted small">Cron 表达式</div>
+                {{if purgeCronExpr}}
+                <code>{{ purgeCronExpr }}</code>
+                {{else}}
+                <span class="text-muted">未启用</span>
+                {{end}}
+            </div>
+            <div class="col-md-8">
+                {{if latestPurgeRun}}
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="text-muted small">最近执行</div>
+                        <div>{{ latestPurgeRun.StartedAt|pretty_time }}</div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-muted small">状态</div>
+                        {{if latestPurgeRun.Success}}
+                        <span class="badge bg-success">成功</span>
+                        {{else}}
+                        <span class="badge bg-danger">失败</span>
+                        {{end}}
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-muted small">删除标签</div>
+                        <div>{{ latestPurgeRun.DeletedTagCount }}</div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-muted small">候选标签</div>
+                        <div>{{ latestPurgeRun.CandidateTagCount }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted small">预计释放空间</div>
+                        <div>{{ latestPurgeRun.EstimatedFreedBytes|pretty_size }}</div>
+                    </div>
+                </div>
+                {{else}}
+                <span class="text-muted">尚无清理执行记录。</span>
+                {{end}}
+            </div>
+        </div>
+    </div>
+</div>
+
 {{if len(topRepos) > 0}}
 <div class="card shadow-sm mt-4">
     <div class="card-header" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">

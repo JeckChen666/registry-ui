@@ -121,6 +121,12 @@ func (a *apiClient) viewEventLog(c echo.Context) error {
 	return c.Render(http.StatusOK, "event_log.html", data)
 }
 
+func (a *apiClient) viewPurgeLog(c echo.Context) error {
+	data := a.setUserPermissions(c)
+	data.Set("purgeRuns", a.eventListener.GetPurgeRuns(100))
+	return c.Render(http.StatusOK, "purge_log.html", data)
+}
+
 // viewStatistics view registry statistics.
 func (a *apiClient) viewStatistics(c echo.Context) error {
 	data := a.setUserPermissions(c)
@@ -132,6 +138,8 @@ func (a *apiClient) viewStatistics(c echo.Context) error {
 	catalogJobInfo, tagsJobInfo := a.client.GetJobInfo()
 	data.Set("catalogJobInfo", catalogJobInfo)
 	data.Set("tagsJobInfo", tagsJobInfo)
+	data.Set("latestPurgeRun", a.eventListener.GetLatestPurgeRun())
+	data.Set("purgeCronExpr", viper.GetString("purge_tags.cron"))
 	return c.Render(http.StatusOK, "statistics.html", data)
 }
 

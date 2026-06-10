@@ -12,7 +12,7 @@ Docker image: [quiq/registry-ui](https://hub.docker.com/r/quiq/registry-ui/tags/
 - View full image details: layers, config, and command history
 - Support for Docker and OCI image formats, including multi-platform image indexes
 - Event listener to capture registry notifications, stored in SQLite or MySQL
-- Built-in CLI for tag retention: purge tags older than X days while keeping at least Y tags
+- Built-in tag retention with CLI and in-process cron scheduling
 - Auto-discovery of authentication methods (basic auth, token service, keychain, etc.)
 - Repository list and tags are cached and refreshed in the background
 
@@ -87,7 +87,7 @@ If you run the UI under a non-default base path (e.g. `/ui`), use `/ui/event-rec
 To use MySQL, update `event_database_driver` and `event_database_location` in the config file.
 Create the database referenced in the DSN beforehand. Required privileges: `SELECT`, `INSERT`, `DELETE`.
 
-To create the table manually (avoids granting `CREATE`):
+To create the tables manually (avoids granting `CREATE`):
 
 	CREATE TABLE events (
 		id INTEGER PRIMARY KEY AUTO_INCREMENT,
@@ -99,6 +99,22 @@ To create the table manually (avoids granting `CREATE`):
 		created DATETIME NULL
 	);
 
+	CREATE TABLE purge_runs (
+		id INTEGER PRIMARY KEY AUTO_INCREMENT,
+		started_at DATETIME NULL,
+		finished_at DATETIME NULL,
+		success BOOLEAN NULL,
+		dry_run BOOLEAN NULL,
+		cron_expr VARCHAR(100) NULL,
+		repo_count INTEGER NULL,
+		candidate_tag_count INTEGER NULL,
+		deleted_tag_count INTEGER NULL,
+		estimated_freed_bytes BIGINT NULL,
+		summary TEXT NULL,
+		error_message TEXT NULL,
+		created DATETIME NULL
+	);
+
 ### Tag purging
 
 First, enable tag deletion in your Docker Registry config:
@@ -107,13 +123,22 @@ First, enable tag deletion in your Docker Registry config:
       delete:
         enabled: true
 
-Then schedule a cron job to purge old tags (assumes the container is already running):
+Then configure the built-in scheduler in `config.yml`:
 
-    10 3 * * * root docker exec -t registry-ui /opt/registry-ui -purge-tags
+    purge_tags:
+      cron: "10 3 * * *"
+      dry_run: false
+      log_retention_days: 30
+      keep_days: 90
+      keep_count: 10
 
 Preview what would be purged with dry-run mode:
 
     docker exec -t registry-ui /opt/registry-ui -purge-tags -dry-run
+
+You can still run the purge manually:
+
+    docker exec -t registry-ui /opt/registry-ui -purge-tags
 
 > **Note:** Purging tags only removes tag references. To reclaim disk space, run garbage collection on your registry afterwards.
 

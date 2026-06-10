@@ -450,26 +450,26 @@ func (c *Client) RefreshTags(interval int) {
 }
 
 // DeleteTag delete image tag.
-func (c *Client) DeleteTag(repoPath, tag string) {
+func (c *Client) DeleteTag(repoPath, tag string) error {
 	ctx := context.Background()
 	imageRef := repoPath + ":" + tag
 	ref, err := name.ParseReference(viper.GetString("registry.hostname")+"/"+imageRef, c.nameOptions...)
 	if err != nil {
 		c.logger.Errorf("Error parsing image reference %s: %s", imageRef, err)
-		return
+		return err
 	}
 	// Get manifest so we have a digest to delete by
 	descr, err := c.puller.Get(ctx, ref)
 	if err != nil {
 		c.logger.Errorf("Error fetching image reference %s: %s", imageRef, err)
-		return
+		return err
 	}
 	// Parse image reference by digest now
 	imageRefDigest := ref.Context().RepositoryStr() + "@" + descr.Digest.String()
 	ref, err = name.ParseReference(viper.GetString("registry.hostname")+"/"+imageRefDigest, c.nameOptions...)
 	if err != nil {
 		c.logger.Errorf("Error parsing image reference %s: %s", imageRefDigest, err)
-		return
+		return err
 	}
 
 	// Delete tag using digest.
@@ -477,7 +477,7 @@ func (c *Client) DeleteTag(repoPath, tag string) {
 	err = c.pusher.Delete(ctx, ref)
 	if err != nil {
 		c.logger.Errorf("Error deleting image %s: %s", imageRef, err)
-		return
+		return err
 	}
 	// Remove tag from cache
 	c.tagsCacheMux.Lock()
@@ -493,4 +493,5 @@ func (c *Client) DeleteTag(repoPath, tag string) {
 	c.tagsCacheMux.Unlock()
 
 	c.logger.Infof("Image %s has been successfully deleted.", imageRef)
+	return nil
 }

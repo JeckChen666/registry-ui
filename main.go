@@ -56,15 +56,26 @@ func main() {
 
 	// Init registry API client.
 	a.client = registry.NewClient()
+	a.eventListener = events.NewEventListener()
 
 	// Execute CLI task and exit.
 	if purgeTags {
-		registry.PurgeOldTags(a.client, purgeDryRun, purgeIncludeRepos, purgeExcludeRepos)
+		run := registry.PurgeOldTags(a.client, purgeDryRun, purgeIncludeRepos, purgeExcludeRepos)
+		if err := a.eventListener.RecordPurgeRun(run); err != nil {
+			logrus.Errorf("failed to record purge run: %v", err)
+		}
 		return
 	}
 
 	go a.client.StartBackgroundJobs()
-	a.eventListener = events.NewEventListener()
+	if _, err := registry.StartPurgeScheduler(viper.GetString("purge_tags.cron"), func() {
+		run := registry.PurgeOldTags(a.client, viper.GetBool("purge_tags.dry_run"), "", "")
+		if err := a.eventListener.RecordPurgeRun(run); err != nil {
+			logrus.Errorf("failed to record scheduled purge run: %v", err)
+		}
+	}); err != nil {
+		logrus.Fatalf("invalid purge cron expression %q: %v", viper.GetString("purge_tags.cron"), err)
+	}
 
 	// Template engine init.
 	e := echo.New()
@@ -96,6 +107,7 @@ func main() {
 	p.GET("/", a.viewCatalog)
 	p.GET("/:repoPath", a.viewCatalog)
 	p.GET("/__event-log", a.viewEventLog)
+	p.GET("/__purge-log", a.viewPurgeLog)
 	p.GET("/__statistics", a.viewStatistics)
 	p.GET("/__options", a.viewOptions)
 	p.GET("/__delete-tag", a.deleteTag)

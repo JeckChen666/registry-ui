@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"os"
@@ -12,6 +13,14 @@ import (
 	"github.com/spf13/viper"
 	"github.com/tidwall/gjson"
 )
+
+type PurgeClient interface {
+	RefreshCatalog()
+	GetRepos() []string
+	FetchAndCacheTagsForRepo(repoName string) []string
+	GetImageInfo(imageRef string) (ImageInfo, error)
+	DeleteTag(repoPath, tag string) error
+}
 
 type TagData struct {
 	name    string
@@ -41,13 +50,65 @@ func (p timeSlice) Swap(i, j int) {
 	p[i], p[j] = p[j], p[i]
 }
 
+type PurgeRepoResult struct {
+	CandidateTagCount   int      `json:"candidate_tag_count"`
+	DeletedTagCount     int      `json:"deleted_tag_count"`
+	EstimatedFreedBytes int64    `json:"estimated_freed_bytes"`
+	Tags                []string `json:"tags"`
+}
+
+type PurgeRunResult struct {
+	StartedAt           time.Time                    `json:"started_at"`
+	FinishedAt          time.Time                    `json:"finished_at"`
+	Success             bool                         `json:"success"`
+	DryRun              bool                         `json:"dry_run"`
+	CronExpr            string                       `json:"cron_expr"`
+	RepoCount           int                          `json:"repo_count"`
+	CandidateTagCount   int                          `json:"candidate_tag_count"`
+	DeletedTagCount     int                          `json:"deleted_tag_count"`
+	EstimatedFreedBytes int64                        `json:"estimated_freed_bytes"`
+	Errors              []string                     `json:"errors"`
+	Repositories        map[string]PurgeRepoResult   `json:"repositories"`
+}
+
+func (r PurgeRunResult) Duration() time.Duration {
+	if r.FinishedAt.IsZero() || r.StartedAt.IsZero() {
+		return 0
+	}
+	return r.FinishedAt.Sub(r.StartedAt)
+}
+
+func (r PurgeRunResult) SummaryJSON() string {
+	if len(r.Repositories) == 0 {
+		return "{}"
+	}
+	data, err := json.Marshal(r.Repositories)
+	if err != nil {
+		return "{}"
+	}
+	return string(data)
+}
+
 // PurgeOldTags purge old tags.
-func PurgeOldTags(client *Client, purgeDryRun bool, purgeIncludeRepos, purgeExcludeRepos string) {
+func PurgeOldTags(client *Client, purgeDryRun bool, purgeIncludeRepos, purgeExcludeRepos string) PurgeRunResult {
+	return RunPurgeOldTags(client, purgeDryRun, purgeIncludeRepos, purgeExcludeRepos)
+}
+
+// RunPurgeOldTags purge old tags and return a structured summary.
+func RunPurgeOldTags(client PurgeClient, purgeDryRun bool, purgeIncludeRepos, purgeExcludeRepos string) PurgeRunResult {
 	logger := SetupLogging("registry.tasks.PurgeOldTags")
+	startedAt := time.Now().UTC()
 	keepDays := viper.GetInt("purge_tags.keep_days")
 	keepCount := viper.GetInt("purge_tags.keep_count")
 	keepRegexp := viper.GetString("purge_tags.keep_regexp")
 	keepFromFile := viper.GetString("purge_tags.keep_from_file")
+	result := PurgeRunResult{
+		StartedAt:    startedAt,
+		DryRun:       purgeDryRun,
+		CronExpr:     viper.GetString("purge_tags.cron"),
+		Success:      true,
+		Repositories: map[string]PurgeRepoResult{},
+	}
 
 	dryRunText := ""
 	if purgeDryRun {
@@ -60,13 +121,19 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeIncludeRepos, purgeExcl
 		if _, err := os.Stat(keepFromFile); os.IsNotExist(err) {
 			logger.Warnf("Cannot open %s: %s", keepFromFile, err)
 			logger.Error("Not purging anything!")
-			return
+			result.Success = false
+			result.Errors = append(result.Errors, err.Error())
+			result.FinishedAt = time.Now().UTC()
+			return result
 		}
 		data, err := os.ReadFile(keepFromFile)
 		if err != nil {
 			logger.Warnf("Cannot read %s: %s", keepFromFile, err)
 			logger.Error("Not purging anything!")
-			return
+			result.Success = false
+			result.Errors = append(result.Errors, err.Error())
+			result.FinishedAt = time.Now().UTC()
+			return result
 		}
 		dataFromFile = gjson.ParseBytes(data)
 	}
@@ -90,10 +157,11 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeIncludeRepos, purgeExcl
 		catalog = tmpCatalog
 	}
 	logger.Infof("Working on repositories: %s", catalog)
+	result.RepoCount = len(catalog)
 
 	now := time.Now().UTC()
 	repos := map[string]timeSlice{}
-	count := 0
+	imageSizes := map[string]int64{}
 	for _, repo := range catalog {
 		tags := client.FetchAndCacheTagsForRepo(repo)
 		if len(tags) == 0 {
@@ -102,7 +170,15 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeIncludeRepos, purgeExcl
 		logger.Infof("[%s] scanning %d tags...", repo, len(tags))
 		for _, tag := range tags {
 			imageRef := repo + ":" + tag
-			created := client.GetImageCreated(imageRef)
+			imageInfo, err := client.GetImageInfo(imageRef)
+			if err != nil {
+				logger.Warnf("[%s] cannot read image info for %s: %s", repo, tag, err)
+				result.Success = false
+				result.Errors = append(result.Errors, fmt.Sprintf("%s:%s image info error: %s", repo, tag, err))
+				continue
+			}
+			created := imageInfo.Created
+			imageSizes[imageRef] = imageInfo.ImageSize
 			if created.IsZero() {
 				// Image manifest with zero creation time
 				logger.Warnf("[%s] tag with zero creation time: %s", repo, tag)
@@ -122,7 +198,8 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeIncludeRepos, purgeExcl
 	}
 	purgeTags := map[string][]string{}
 	keepTags := map[string][]string{}
-	count = 0
+	purgeSizeByRepo := map[string]int64{}
+	totalCandidates := 0
 	for _, repo := range SortedMapKeys(repos) {
 		// Sort tags by "created" from newest to oldest.
 		sort.Sort(repos[repo])
@@ -156,14 +233,27 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeIncludeRepos, purgeExcl
 			purgeTags[repo] = purgeTags[repo][takeFromPurge:]
 		}
 
-		count = count + len(purgeTags[repo])
+		for _, tag := range purgeTags[repo] {
+			purgeSizeByRepo[repo] += imageSizes[repo+":"+tag]
+		}
+
+		totalCandidates += len(purgeTags[repo])
+		result.Repositories[repo] = PurgeRepoResult{
+			CandidateTagCount:   len(purgeTags[repo]),
+			EstimatedFreedBytes: purgeSizeByRepo[repo],
+			Tags:                append([]string{}, purgeTags[repo]...),
+		}
 		logger.Infof("[%s] All %d: %v", repo, len(repos[repo]), repos[repo])
 		logger.Infof("[%s] Keep %d: %v", repo, len(keepTags[repo]), keepTags[repo])
 		logger.Infof("[%s] Purge %d: %v", repo, len(purgeTags[repo]), purgeTags[repo])
 	}
 
-	logger.Infof("There are %d tags to purge.", count)
-	if count > 0 {
+	result.CandidateTagCount = totalCandidates
+	for _, repoResult := range result.Repositories {
+		result.EstimatedFreedBytes += repoResult.EstimatedFreedBytes
+	}
+	logger.Infof("There are %d tags to purge.", totalCandidates)
+	if totalCandidates > 0 {
 		logger.Info("Purging old tags...")
 	}
 
@@ -175,9 +265,19 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeIncludeRepos, purgeExcl
 		if purgeDryRun {
 			continue
 		}
+		repoResult := result.Repositories[repo]
 		for _, tag := range purgeTags[repo] {
-			client.DeleteTag(repo, tag)
+			if err := client.DeleteTag(repo, tag); err != nil {
+				result.Success = false
+				result.Errors = append(result.Errors, fmt.Sprintf("%s:%s delete error: %s", repo, tag, err))
+				continue
+			}
+			result.DeletedTagCount++
+			repoResult.DeletedTagCount++
 		}
+		result.Repositories[repo] = repoResult
 	}
 	logger.Info("Done.")
+	result.FinishedAt = time.Now().UTC()
+	return result
 }
