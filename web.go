@@ -149,6 +149,8 @@ func (a *apiClient) viewOptions(c echo.Context) error {
 		"registry.password_file":           true,
 		"event_listener.bearer_token":      true,
 		"event_listener.database_location": true,
+		"auth.password":                    true,
+		"auth.secret":                      true,
 	}
 
 	settings := viper.AllSettings()

@@ -88,6 +88,19 @@ purge_tags:
   # Empty string disables this feature.
   keep_from_file: ''
 
+# UI authentication.
+# When enabled, users must log in with username/password to access the UI.
+auth:
+  enabled: false
+  username: admin
+  password: changeme
+  # Secret key used to sign session cookies. Change this to a random string.
+  secret: "change-me-to-a-random-string"
+  # Brute-force protection: max failed attempts before lockout (0 to disable).
+  max_attempts: 5
+  # Lockout duration in minutes after exceeding max_attempts.
+  lockout_minutes: 15
+
 # Debug mode.
 debug:
   # Affects only templates.

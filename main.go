@@ -84,10 +84,15 @@ func main() {
 	e.File("/favicon.ico", "static/favicon.ico")
 	e.Static(basePath+"/static", "static")
 
+	// Auth routes (no middleware).
+	e.GET(basePath+"/login", loginHandler)
+	e.POST(basePath+"/login", loginHandler)
+	e.GET(basePath+"/logout", logoutHandler)
+
+	// Protected routes with auth middleware.
 	p := e.Group(basePath)
-	if basePath != "" {
-		e.GET(basePath, a.viewCatalog)
-	}
+	p.Use(authMiddleware())
+	p.GET("", a.viewCatalog)
 	p.GET("/", a.viewCatalog)
 	p.GET("/:repoPath", a.viewCatalog)
 	p.GET("/__event-log", a.viewEventLog)
