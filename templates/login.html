@@ -1,31 +1,37 @@
 {{extends "base.html"}}
 
 {{block body()}}
-<div class="row justify-content-center mt-5">
-    <div class="col-md-5 col-lg-4">
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <h4 class="card-title text-center mb-4">
-                    <i class="bi-box-arrow-in-right me-2"></i>登录
-                </h4>
+<section class="auth-shell">
+    <div class="auth-panel">
+        <div class="auth-copy">
+            <div class="page-eyebrow">Registry UI</div>
+            <h1 class="auth-title">登录控制台</h1>
+            <p class="auth-subtitle">访问镜像仓库、查看运行状态并管理清理任务。统一的控制台界面将浏览、运维与审计信息整合在一个清晰的工作区里。</p>
+        </div>
+        <div class="content-card auth-card">
+            <div class="content-card-body p-4 p-lg-5">
+                <h2 class="auth-card-title">
+                    <i class="bi bi-shield-lock"></i>
+                    <span>身份验证</span>
+                </h2>
                 {{if error}}
-                <div class="alert alert-danger" role="alert">
+                <div class="alert alert-danger app-alert" role="alert">
                     {{error}}
                 </div>
                 {{end}}
-                <form method="POST" action="{{ basePath }}/login">
+                <form method="POST" action="{{ basePath }}/login" class="auth-form">
                     <div class="mb-3">
                         <label for="username" class="form-label">用户名</label>
-                        <input type="text" class="form-control" id="username" name="username" required autofocus>
+                        <input type="text" class="form-control form-control-app" id="username" name="username" required autofocus>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label for="password" class="form-label">密码</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+                        <input type="password" class="form-control form-control-app" id="password" name="password" required>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">登录</button>
+                    <button type="submit" class="btn btn-primary btn-app-primary w-100">登录</button>
                 </form>
             </div>
         </div>
     </div>
-</div>
+</section>
 {{end}}

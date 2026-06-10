@@ -21,27 +21,25 @@
             }
         });
 
-        $.fn.dataTable.ext.search.push(function( settings, searchData, index, rowData, counter ) {
+        $.fn.dataTable.ext.search.push(function(settings, searchData) {
             var action = $('input:checkbox[name="action_chk"]:checked').map(function() {
                 return this.value;
             }).get();
             if (action.length === 0) {
                 return true;
             }
-            if (action.indexOf(searchData[0]) !== -1) {
-                return true;
-            }
-            return false;
+            return action.indexOf(searchData[0]) !== -1;
         });
+
         $('input:checkbox[name="action_chk"]').on('change', function () {
             table.draw();
         });
 
         $('input:checkbox[name="sha256_chk"]').on('change', function () {
             if ($(this).prop('checked')) {
-                table.column(1).search($(this).val()).draw() ;
+                table.column(1).search($(this).val()).draw();
             } else {
-                table.column(1).search('').draw() ;
+                table.column(1).search('').draw();
             }
         });
 
@@ -53,32 +51,51 @@
 {{end}}
 
 {{block body()}}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb rounded shadow-sm">
-        {{ yield breadcrumb() }}
-        <li class="breadcrumb-item active" aria-current="page"><strong>事件日志</strong></li>
-    </ol>
-</nav>
+<section class="page-hero">
+    <div class="page-title-row">
+        <div class="page-eyebrow">Operations</div>
+        <h1 class="page-title">事件日志</h1>
+        <p class="page-subtitle">筛选 Registry 事件、查看 push 记录并快速定位镜像变更。</p>
+    </div>
+    <div class="page-toolbar">
+        <nav aria-label="breadcrumb" class="page-toolbar-group page-toolbar-breadcrumb">
+            <ol class="breadcrumb mb-0">
+                {{ yield breadcrumb() }}
+                <li class="breadcrumb-item active" aria-current="page"><strong>事件日志</strong></li>
+            </ol>
+        </nav>
+    </div>
+</section>
 
 {{if eventsAllowed}}
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <input type="text" id="events-search" class="form-control mb-3" placeholder="搜索事件...">
-        <div class="d-flex gap-4">
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" name="action_chk" value="push" id="hidePullCheck">
-                <label class="form-check-label" for="hidePullCheck">隐藏 Pull</label>
+<section class="content-card">
+    <div class="content-card-body">
+        <div class="page-toolbar page-toolbar-stack">
+            <div class="page-toolbar-group page-toolbar-search">
+                <div class="search-input-wrap">
+                    <i class="bi bi-search search-input-icon"></i>
+                    <input type="text" id="events-search" class="form-control form-control-app" placeholder="搜索事件、镜像、用户或时间...">
+                </div>
             </div>
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" name="sha256_chk" value="!@sha256" id="hideSha256Check" checked>
-                <label class="form-check-label" for="hideSha256Check">隐藏 sha256 条目</label>
+            <div class="page-toolbar-group filter-switches">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="action_chk" value="push" id="hidePullCheck">
+                    <label class="form-check-label" for="hidePullCheck">隐藏 Pull</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="sha256_chk" value="!@sha256" id="hideSha256Check" checked>
+                    <label class="form-check-label" for="hideSha256Check">隐藏 sha256 条目</label>
+                </div>
             </div>
         </div>
     </div>
-    <div class="card-body p-0">
+</section>
+
+<section class="content-card">
+    <div class="content-card-body p-0">
         <div class="table-responsive">
-            <table id="datatable" class="table table-hover table-striped mb-0">
-                <thead class="table-light">
+            <table id="datatable" class="table table-app align-middle mb-0">
+                <thead>
                     <tr>
                         <th>操作</th>
                         <th>镜像</th>
@@ -90,16 +107,16 @@
                 <tbody>
                     {{range _, e := events}}
                         <tr>
-                            <td><span class="badge bg-primary">{{ e.Action }}</span></td>
+                            <td><span class="count-badge">{{ e.Action }}</span></td>
                             {{if hasPrefix(e.Tag,"sha256:") }}
                             <td title="{{ e.Tag }}">
-                                <a href="{{ basePath }}/{{ e.Repository }}@{{ e.Tag }}" class="text-decoration-none">
+                                <a href="{{ basePath }}/{{ e.Repository }}@{{ e.Tag }}" class="list-item-link">
                                     <span class="small">{{ e.Repository }}@{{ e.Tag[:19] }}...</span>
                                 </a>
                             </td>
                             {{else}}
                             <td>
-                                <a href="{{ basePath }}/{{ e.Repository }}:{{ e.Tag }}" class="text-decoration-none">
+                                <a href="{{ basePath }}/{{ e.Repository }}:{{ e.Tag }}" class="list-item-link">
                                     <span class="small">{{ e.Repository }}:{{ e.Tag }}</span>
                                 </a>
                             </td>
@@ -113,7 +130,7 @@
             </table>
         </div>
     </div>
-</div>
+</section>
 {{else}}
 <div class="alert alert-warning text-center" role="alert">
     <i class="bi bi-exclamation-triangle fs-1"></i>

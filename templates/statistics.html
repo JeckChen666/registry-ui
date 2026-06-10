@@ -5,63 +5,65 @@
 {{end}}
 
 {{block body()}}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb rounded shadow-sm">
-        {{ yield breadcrumb() }}
-        <li class="breadcrumb-item active" aria-current="page"><strong>统计信息</strong></li>
-    </ol>
-</nav>
+<section class="page-hero">
+    <div class="page-title-row">
+        <div class="page-eyebrow">Insights</div>
+        <h1 class="page-title">统计信息</h1>
+        <p class="page-subtitle">查看仓库规模、标签密度、后台任务运行情况与定时清理结果。</p>
+    </div>
+    <div class="page-toolbar">
+        <nav aria-label="breadcrumb" class="page-toolbar-group page-toolbar-breadcrumb">
+            <ol class="breadcrumb mb-0">
+                {{ yield breadcrumb() }}
+                <li class="breadcrumb-item active" aria-current="page"><strong>统计信息</strong></li>
+            </ol>
+        </nav>
+    </div>
+</section>
 
 {{if eventsAllowed}}
-<div class="row g-4">
-    <div class="col-md-4">
-        <div class="card shadow-sm text-center">
-            <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                <h5 class="mb-0"><i class="bi bi-folder2 me-2"></i>仓库</h5>
-            </div>
-            <div class="card-body py-4">
-                {{if repoCount > 0}}
-                <h1 class="display-4 fw-bold text-primary">{{ repoCount }}</h1>
-                {{else}}
-                <p class="text-muted mb-0">后台加载中...</p>
-                {{end}}
-            </div>
+<div class="metrics-grid">
+    <article class="metric-card">
+        <div class="metric-card-head">
+            <span class="metric-card-icon metric-card-icon-primary"><i class="bi bi-folder2"></i></span>
+            <span class="metric-card-label">仓库</span>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card shadow-sm text-center">
-            <div class="card-header" style="background: linear-gradient(135deg, #65a30d 0%, #4d7c0f 100%); color: white;">
-                <h5 class="mb-0"><i class="bi bi-tags me-2"></i>标签</h5>
-            </div>
-            <div class="card-body py-4">
-                {{if tagCount > 0}}
-                <h1 class="display-4 fw-bold text-success">{{ tagCount }}</h1>
-                {{else}}
-                <p class="text-muted mb-0">后台加载中...</p>
-                {{end}}
-            </div>
+        <div class="metric-card-value">{{if repoCount > 0}}{{ repoCount }}{{else}}-{{end}}</div>
+        <div class="metric-card-meta">{{if repoCount > 0}}已索引仓库总数{{else}}后台加载中...{{end}}</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-card-head">
+            <span class="metric-card-icon metric-card-icon-success"><i class="bi bi-tags"></i></span>
+            <span class="metric-card-label">标签</span>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card shadow-sm text-center">
-            <div class="card-header" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
-                <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>事件日志条目</h5>
-            </div>
-            <div class="card-body py-4">
-                <h1 class="display-4 fw-bold text-info">{{ eventCount }}</h1>
-            </div>
+        <div class="metric-card-value">{{if tagCount > 0}}{{ tagCount }}{{else}}-{{end}}</div>
+        <div class="metric-card-meta">{{if tagCount > 0}}当前缓存中的镜像标签总数{{else}}后台加载中...{{end}}</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-card-head">
+            <span class="metric-card-icon metric-card-icon-info"><i class="bi bi-clock-history"></i></span>
+            <span class="metric-card-label">事件日志</span>
         </div>
-    </div>
+        <div class="metric-card-value">{{ eventCount }}</div>
+        <div class="metric-card-meta">已记录的 registry 事件条目</div>
+    </article>
 </div>
 
-<div class="card shadow-sm mt-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
-        <h5 class="mb-0"><i class="bi bi-arrow-repeat me-2"></i>后台任务</h5>
+<section class="content-card">
+    <div class="content-card-header">
+        <div>
+            <div class="content-card-eyebrow">Jobs</div>
+            <h2 class="content-card-title">
+                <i class="bi bi-arrow-repeat"></i>
+                <span>后台任务</span>
+            </h2>
+            <p class="content-card-subtitle">查看目录与标签刷新任务最近运行情况。</p>
+        </div>
     </div>
-    <div class="card-body p-0">
+    <div class="content-card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
+            <table class="table table-app align-middle mb-0">
+                <thead>
                     <tr>
                         <th>任务</th>
                         <th>上次运行</th>
@@ -70,19 +72,35 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td><i class="bi bi-folder2 text-primary me-2"></i>目录刷新</td>
+                        <td>
+                            <div class="list-item-main">
+                                <span class="list-item-icon"><i class="bi bi-folder2"></i></span>
+                                <div>
+                                    <div class="list-item-link">目录刷新</div>
+                                    <div class="list-item-meta">定期刷新镜像仓库目录</div>
+                                </div>
+                            </div>
+                        </td>
                         {{if !catalogJobInfo.LastRun.IsZero()}}
                         <td><span class="text-muted small">{{ catalogJobInfo.LastRun|pretty_time }}</span></td>
-                        <td><span class="badge bg-secondary">{{ catalogJobInfo.Duration|pretty_duration }}</span></td>
+                        <td><span class="count-badge">{{ catalogJobInfo.Duration|pretty_duration }}</span></td>
                         {{else}}
                         <td colspan="2"><span class="text-muted small">尚未运行</span></td>
                         {{end}}
                     </tr>
                     <tr>
-                        <td><i class="bi bi-tags text-success me-2"></i>标签刷新</td>
+                        <td>
+                            <div class="list-item-main">
+                                <span class="list-item-icon"><i class="bi bi-tags"></i></span>
+                                <div>
+                                    <div class="list-item-link">标签刷新</div>
+                                    <div class="list-item-meta">更新仓库标签列表与计数</div>
+                                </div>
+                            </div>
+                        </td>
                         {{if !tagsJobInfo.LastRun.IsZero()}}
                         <td><span class="text-muted small">{{ tagsJobInfo.LastRun|pretty_time }}</span></td>
-                        <td><span class="badge bg-secondary">{{ tagsJobInfo.Duration|pretty_duration }}</span></td>
+                        <td><span class="count-badge">{{ tagsJobInfo.Duration|pretty_duration }}</span></td>
                         {{else}}
                         <td colspan="2"><span class="text-muted small">尚未运行</span></td>
                         {{end}}
@@ -91,31 +109,38 @@
             </table>
         </div>
     </div>
-</div>
+</section>
 
-<div class="card shadow-sm mt-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: #333;">
-        <h5 class="mb-0"><i class="bi bi-trash3 me-2"></i>定时清理任务</h5>
+<section class="content-card">
+    <div class="content-card-header">
+        <div>
+            <div class="content-card-eyebrow">Maintenance</div>
+            <h2 class="content-card-title">
+                <i class="bi bi-trash3"></i>
+                <span>定时清理任务</span>
+            </h2>
+            <p class="content-card-subtitle">查看清理计划配置与最近一次执行摘要。</p>
+        </div>
     </div>
-    <div class="card-body">
-        <div class="row g-3 align-items-center">
-            <div class="col-md-4">
-                <div class="text-muted small">Cron 表达式</div>
+    <div class="content-card-body">
+        <div class="row g-4 align-items-start">
+            <div class="col-lg-4">
+                <div class="text-muted small mb-2">Cron 表达式</div>
                 {{if purgeCronExpr}}
                 <code>{{ purgeCronExpr }}</code>
                 {{else}}
                 <span class="text-muted">未启用</span>
                 {{end}}
             </div>
-            <div class="col-md-8">
+            <div class="col-lg-8">
                 {{if latestPurgeRun}}
                 <div class="row g-3">
                     <div class="col-md-3">
-                        <div class="text-muted small">最近执行</div>
+                        <div class="text-muted small mb-2">最近执行</div>
                         <div>{{ latestPurgeRun.StartedAt|pretty_time }}</div>
                     </div>
                     <div class="col-md-2">
-                        <div class="text-muted small">状态</div>
+                        <div class="text-muted small mb-2">状态</div>
                         {{if latestPurgeRun.Success}}
                         <span class="badge bg-success">成功</span>
                         {{else}}
@@ -123,15 +148,15 @@
                         {{end}}
                     </div>
                     <div class="col-md-2">
-                        <div class="text-muted small">删除标签</div>
+                        <div class="text-muted small mb-2">删除标签</div>
                         <div>{{ latestPurgeRun.DeletedTagCount }}</div>
                     </div>
                     <div class="col-md-2">
-                        <div class="text-muted small">候选标签</div>
+                        <div class="text-muted small mb-2">候选标签</div>
                         <div>{{ latestPurgeRun.CandidateTagCount }}</div>
                     </div>
                     <div class="col-md-3">
-                        <div class="text-muted small">预计释放空间</div>
+                        <div class="text-muted small mb-2">预计释放空间</div>
                         <div>{{ latestPurgeRun.EstimatedFreedBytes|pretty_size }}</div>
                     </div>
                 </div>
@@ -141,17 +166,24 @@
             </div>
         </div>
     </div>
-</div>
+</section>
 
 {{if len(topRepos) > 0}}
-<div class="card shadow-sm mt-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-        <h5 class="mb-0" style="color: #333;"><i class="bi bi-trophy me-2"></i>标签数量 Top 10 仓库</h5>
+<section class="content-card">
+    <div class="content-card-header">
+        <div>
+            <div class="content-card-eyebrow">Ranking</div>
+            <h2 class="content-card-title">
+                <i class="bi bi-trophy"></i>
+                <span>标签数量 Top 10 仓库</span>
+            </h2>
+            <p class="content-card-subtitle">快速识别标签最密集的仓库。</p>
+        </div>
     </div>
-    <div class="card-body p-0">
+    <div class="content-card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover table-striped mb-0">
-                <thead class="table-light">
+            <table class="table table-app align-middle mb-0">
+                <thead>
                     <tr>
                         <th width="5%">#</th>
                         <th>仓库</th>
@@ -163,17 +195,22 @@
                     <tr>
                         <td class="text-muted">{{ i+1 }}</td>
                         <td>
-                            <i class="bi bi-folder2 text-primary me-2"></i>
-                            <a href="{{ basePath }}/{{ r.Repo }}" class="text-decoration-none fw-semibold">{{ r.Repo }}</a>
+                            <div class="list-item-main">
+                                <span class="list-item-icon"><i class="bi bi-folder2"></i></span>
+                                <div>
+                                    <a href="{{ basePath }}/{{ r.Repo }}" class="list-item-link">{{ r.Repo }}</a>
+                                    <div class="list-item-meta">热门仓库</div>
+                                </div>
+                            </div>
                         </td>
-                        <td><span class="badge bg-secondary">{{ r.Count }}</span></td>
+                        <td><span class="count-badge">{{ r.Count }}</span></td>
                     </tr>
                     {{end}}
                 </tbody>
             </table>
         </div>
     </div>
-</div>
+</section>
 {{end}}
 {{else}}
 <div class="alert alert-warning text-center" role="alert">
