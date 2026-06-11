@@ -29,6 +29,10 @@ func (a *apiClient) viewCatalog(c echo.Context) error {
 	repoPath := strings.Trim(c.Param("repoPath"), "/")
 	// fmt.Println("repoPath:", repoPath)
 
+	if repoPath == "__event-log" {
+		return c.NoContent(http.StatusNotFound)
+	}
+
 	data := a.setUserPermissions(c)
 	data.Set("repoPath", repoPath)
 
@@ -112,13 +116,6 @@ func (a *apiClient) deleteTag(c echo.Context) error {
 	}
 	basePath := viper.GetString("uri_base_path")
 	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s%s", basePath, repoPath))
-}
-
-// viewLog view events from sqlite.
-func (a *apiClient) viewEventLog(c echo.Context) error {
-	data := a.setUserPermissions(c)
-	data.Set("events", a.eventListener.GetEvents(""))
-	return c.Render(http.StatusOK, "event_log.html", data)
 }
 
 func (a *apiClient) viewPurgeLog(c echo.Context) error {

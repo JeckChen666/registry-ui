@@ -4,3 +4,6 @@ keep_tags.json
 /.idea/
 /.worktrees/
 config-real.yml
+*.exe
+*.exe~
+*.log

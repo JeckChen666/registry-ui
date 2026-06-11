@@ -106,7 +106,6 @@ func main() {
 	p.GET("", a.viewCatalog)
 	p.GET("/", a.viewCatalog)
 	p.GET("/:repoPath", a.viewCatalog)
-	p.GET("/__event-log", a.viewEventLog)
 	p.GET("/__purge-log", a.viewPurgeLog)
 	p.GET("/__statistics", a.viewStatistics)
 	p.GET("/__options", a.viewOptions)

@@ -24,11 +24,11 @@
                         </span>
                     </a>
                     <nav class="app-nav" aria-label="Primary">
-                        {{if eventsAllowed}}
-                        <a class="app-nav-link" href="{{ basePath }}/__event-log">
-                            <i class="bi bi-activity"></i>
-                            <span>事件日志</span>
+                        <a class="app-nav-link" href="{{ basePath }}/">
+                            <i class="bi bi-grid-1x2"></i>
+                            <span>所有仓库</span>
                         </a>
+                        {{if eventsAllowed}}
                         <a class="app-nav-link" href="{{ basePath }}/__purge-log">
                             <i class="bi bi-trash3"></i>
                             <span>清理日志</span>
@@ -71,10 +71,6 @@
                         <div class="app-footer-copy">Registry UI v{{version}}</div>
                         <div class="app-footer-links">
                             <a href="https://quiq.com" target="_blank" class="text-decoration-none">Quiq Inc.</a>
-                            <a href="https://github.com/Quiq/registry-ui" target="_blank" class="text-decoration-none">
-                                <i class="bi bi-github"></i>
-                                <span>GitHub</span>
-                            </a>
                         </div>
                     </div>
                 </div>

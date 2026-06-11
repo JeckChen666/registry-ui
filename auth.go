@@ -143,6 +143,7 @@ func loginHandler(c echo.Context) error {
 	data.Set("user", "")
 	data.Set("eventsAllowed", false)
 	data.Set("deleteAllowed", false)
+	data.Set("error", "")
 
 	ip := c.RealIP()
 

@@ -416,6 +416,17 @@ a:hover {
     padding: 1.35rem;
 }
 
+.content-card-body.p-0 {
+    padding: 1rem !important;
+}
+
+.content-card-body.p-0 > .table-responsive {
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-md);
+    background: color-mix(in srgb, var(--app-surface-strong) 90%, transparent 10%);
+    overflow: hidden;
+}
+
 .content-card-body > .table-responsive > .table-app,
 .content-card-body > .table-responsive > .table {
     margin-bottom: 0;
@@ -645,6 +656,34 @@ a:hover {
 
 .detail-table td {
     word-break: break-word;
+    padding: 1rem 1.4rem !important;
+    line-height: 1.65;
+}
+
+.detail-table code {
+    display: inline-block;
+    max-width: 100%;
+    white-space: normal;
+}
+
+.json-table-key {
+    color: var(--app-text-muted) !important;
+    font-weight: 600;
+    background: color-mix(in srgb, var(--app-surface-muted) 46%, transparent 54%);
+}
+
+.json-table-nested-cell {
+    padding: 0 !important;
+}
+
+.json-table-value > .table,
+.json-table-nested-cell > .table {
+    margin-bottom: 0;
+}
+
+.json-table-value > .table td,
+.json-table-nested-cell > .table td {
+    border-top: 0;
 }
 
 .table-responsive {
@@ -670,7 +709,7 @@ a:hover {
 }
 
 .table-app tbody td {
-    padding: 1rem 1.35rem;
+    padding: 1rem 1.4rem;
     vertical-align: middle;
     border-color: var(--app-border);
 }

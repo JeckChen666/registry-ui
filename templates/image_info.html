@@ -3,6 +3,18 @@
 {{import "json_to_table.html"}}
 
 {{block head()}}
+<script type="text/javascript" src="{{ basePath }}/static/js/bs5-confirmation.js"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('[data-bs-toggle=confirmation]').confirmationPopover({
+            title: '确认删除这个镜像标签？',
+            btnOkText: '删除',
+            btnCancelText: '取消',
+            btnOkClass: 'btn-sm btn-danger',
+            btnCancelClass: 'btn-sm btn-secondary'
+        });
+    });
+</script>
 {{end}}
 
 {{block body()}}
@@ -19,6 +31,16 @@
                 <li class="breadcrumb-item"><a href="{{ basePath }}/{{ repoPath }}" class="breadcrumb-link">{{ ii.ImageRefTag }}</a></li>
             </ol>
         </nav>
+        {{if deleteAllowed && (ii.IsImage || ii.IsImageIndex)}}
+        <div class="page-toolbar-group">
+            <a href="{{ basePath }}/__delete-tag?repoPath={{ ii.ImageRefRepo }}&tag={{ ii.ImageRefTag }}"
+               data-bs-toggle="confirmation"
+               class="btn btn-outline-danger"
+               role="button">
+                <i class="bi bi-trash me-1"></i>删除镜像
+            </a>
+        </div>
+        {{end}}
     </div>
 </section>
 
@@ -41,6 +63,10 @@
                         <td><code>{{ registryHost }}/{{ repoPath }}</code></td>
                     </tr>
                     <tr>
+                        <td class="fw-bold text-muted detail-key">当前标签</td>
+                        <td><code>{{ ii.ImageRefTag }}</code></td>
+                    </tr>
+                    <tr>
                         <td class="fw-bold text-muted detail-key">摘要</td>
                         <td>
                             <a href="{{ basePath }}/{{ ii.ImageRefRepo }}@{{ ii.ImageRefDigest }}" class="list-item-link">
@@ -58,6 +84,10 @@
                         <td><span class="badge bg-info">{{ len(ii.Manifest["manifests"]) }}</span></td>
                     </tr>
                     <tr>
+                        <td class="fw-bold text-muted detail-key">注解数</td>
+                        <td><span class="badge bg-secondary">{{ if isset(ii.Manifest["annotations"]) }}{{ len(ii.Manifest["annotations"]) }}{{ else }}0{{ end }}</span></td>
+                    </tr>
+                    <tr>
                         <td class="fw-bold text-muted detail-key">平台</td>
                         <td><code class="small">{{ ii.Platforms }}</code></td>
                     </tr>
@@ -72,12 +102,44 @@
                         <td><span class="badge bg-success">{{ ii.ImageSize|pretty_size }}</span></td>
                     </tr>
                     <tr>
+                        <td class="fw-bold text-muted detail-key">层数</td>
+                        <td><span class="badge bg-info">{{ len(ii.Manifest["layers"]) }}</span></td>
+                    </tr>
+                    <tr>
                         <td class="fw-bold text-muted detail-key">平台</td>
                         <td><code class="small">{{ ii.Platforms }}</code></td>
                     </tr>
                     <tr>
                         <td class="fw-bold text-muted detail-key">创建时间</td>
                         <td><span class="text-muted">{{ ii.Created|pretty_time }}</span></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted detail-key">系统用户</td>
+                        <td><code class="small">{{ ii.ConfigFile["config"]["User"] }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted detail-key">工作目录</td>
+                        <td><code class="small">{{ ii.ConfigFile["config"]["WorkingDir"] }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted detail-key">入口命令</td>
+                        <td><code class="small">{{ ii.ConfigFile["config"]["Entrypoint"] }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted detail-key">启动命令</td>
+                        <td><code class="small">{{ ii.ConfigFile["config"]["Cmd"] }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted detail-key">环境变量</td>
+                        <td><span class="badge bg-secondary">{{ if isset(ii.ConfigFile["config"]["Env"]) }}{{ len(ii.ConfigFile["config"]["Env"]) }}{{ else }}0{{ end }}</span></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted detail-key">标签元数据</td>
+                        <td><span class="badge bg-secondary">{{ if isset(ii.ConfigFile["config"]["Labels"]) }}{{ len(ii.ConfigFile["config"]["Labels"]) }}{{ else }}0{{ end }}</span></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted detail-key">RootFS 类型</td>
+                        <td><code class="small">{{ ii.ConfigFile["rootfs"]["type"] }}</code></td>
                     </tr>
                     {{end}}
                 </tbody>
