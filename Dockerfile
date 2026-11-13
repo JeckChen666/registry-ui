@@ -12,6 +12,8 @@ RUN sed -i 's|https://dl-cdn.alpinelinux.org/alpine|https://mirrors.aliyun.com/a
 RUN apk update && \
     apk add ca-certificates git bash gcc musl-dev
 
+ENV GOPROXY=https://goproxy.cn,https://goproxy.io,direct
+
 WORKDIR /opt/src
 ADD events events
 ADD registry registry
