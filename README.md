@@ -140,7 +140,11 @@ You can still run the purge manually:
 
     docker exec -t registry-ui /opt/registry-ui -purge-tags
 
-> **Note:** Purging tags only removes tag references. To reclaim disk space, run garbage collection on your registry afterwards.
+The scheduler uses the container's local timezone. Tag age is measured from the image creation time, not the time a tag was pushed. For multi-platform images, the newest platform creation time is used. Tags without a reliable creation time cause their repository to be skipped and the run to be marked as failed.
+
+Purging deletes manifests by digest. If a digest is shared with a tag selected for retention, all of its tags are kept. The task checks the repository again before deleting and verifies that tags disappear afterwards. Registry APIs do not provide an atomic check-and-delete operation, so avoid pushing or retagging images in a repository while it is being purged. Multiple UI instances running the scheduler also require external coordination.
+
+The size shown in the purge log is the sum of candidate image sizes, not the actual disk space recovered. Layers may be shared and registry garbage collection is typically required to reclaim space.
 
 ### Screenshots
 

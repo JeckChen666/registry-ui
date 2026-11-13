@@ -15,16 +15,17 @@ import (
 )
 
 type PurgeClient interface {
-	RefreshCatalog()
+	RefreshCatalog() error
 	GetRepos() []string
-	FetchAndCacheTagsForRepo(repoName string) []string
-	GetImageInfo(imageRef string) (ImageInfo, error)
-	DeleteTag(repoPath, tag string) error
+	FetchTagsForPurge(repoName string) ([]string, error)
+	GetPurgeImageInfo(imageRef string) (ImageInfo, error)
+	DeletePurgeDigest(repoPath, digest string) error
 }
 
 type TagData struct {
 	name    string
 	created time.Time
+	digest  string
 }
 
 func (t TagData) String() string {
@@ -58,17 +59,17 @@ type PurgeRepoResult struct {
 }
 
 type PurgeRunResult struct {
-	StartedAt           time.Time                    `json:"started_at"`
-	FinishedAt          time.Time                    `json:"finished_at"`
-	Success             bool                         `json:"success"`
-	DryRun              bool                         `json:"dry_run"`
-	CronExpr            string                       `json:"cron_expr"`
-	RepoCount           int                          `json:"repo_count"`
-	CandidateTagCount   int                          `json:"candidate_tag_count"`
-	DeletedTagCount     int                          `json:"deleted_tag_count"`
-	EstimatedFreedBytes int64                        `json:"estimated_freed_bytes"`
-	Errors              []string                     `json:"errors"`
-	Repositories        map[string]PurgeRepoResult   `json:"repositories"`
+	StartedAt           time.Time                  `json:"started_at"`
+	FinishedAt          time.Time                  `json:"finished_at"`
+	Success             bool                       `json:"success"`
+	DryRun              bool                       `json:"dry_run"`
+	CronExpr            string                     `json:"cron_expr"`
+	RepoCount           int                        `json:"repo_count"`
+	CandidateTagCount   int                        `json:"candidate_tag_count"`
+	DeletedTagCount     int                        `json:"deleted_tag_count"`
+	EstimatedFreedBytes int64                      `json:"estimated_freed_bytes"`
+	Errors              []string                   `json:"errors"`
+	Repositories        map[string]PurgeRepoResult `json:"repositories"`
 }
 
 func (r PurgeRunResult) Duration() time.Duration {
@@ -109,6 +110,23 @@ func RunPurgeOldTags(client PurgeClient, purgeDryRun bool, purgeIncludeRepos, pu
 		Success:      true,
 		Repositories: map[string]PurgeRepoResult{},
 	}
+	if keepDays < 0 || keepCount < 0 {
+		result.Success = false
+		result.Errors = append(result.Errors, "keep_days and keep_count must not be negative")
+		result.FinishedAt = time.Now().UTC()
+		return result
+	}
+	var keepPattern *regexp.Regexp
+	if keepRegexp != "" {
+		var err error
+		keepPattern, err = regexp.Compile(keepRegexp)
+		if err != nil {
+			result.Success = false
+			result.Errors = append(result.Errors, fmt.Sprintf("invalid keep regexp: %v", err))
+			result.FinishedAt = time.Now().UTC()
+			return result
+		}
+	}
 
 	dryRunText := ""
 	if purgeDryRun {
@@ -135,7 +153,35 @@ func RunPurgeOldTags(client PurgeClient, purgeDryRun bool, purgeIncludeRepos, pu
 			result.FinishedAt = time.Now().UTC()
 			return result
 		}
+		if !gjson.ValidBytes(data) {
+			result.Success = false
+			result.Errors = append(result.Errors, fmt.Sprintf("invalid JSON in keep file %s", keepFromFile))
+			result.FinishedAt = time.Now().UTC()
+			return result
+		}
 		dataFromFile = gjson.ParseBytes(data)
+		if !dataFromFile.IsObject() {
+			result.Success = false
+			result.Errors = append(result.Errors, "keep file must contain an object of repository names and tag arrays")
+			result.FinishedAt = time.Now().UTC()
+			return result
+		}
+		for repo, tags := range dataFromFile.Map() {
+			if !tags.IsArray() {
+				result.Success = false
+				result.Errors = append(result.Errors, fmt.Sprintf("keep file entry for %s must be an array", repo))
+				result.FinishedAt = time.Now().UTC()
+				return result
+			}
+			for _, tag := range tags.Array() {
+				if tag.Type != gjson.String {
+					result.Success = false
+					result.Errors = append(result.Errors, fmt.Sprintf("keep file entry for %s contains a non-string tag", repo))
+					result.FinishedAt = time.Now().UTC()
+					return result
+				}
+			}
+		}
 	}
 
 	catalog := []string{}
@@ -143,7 +189,12 @@ func RunPurgeOldTags(client PurgeClient, purgeDryRun bool, purgeIncludeRepos, pu
 		logger.Infof("Including repositories: %s", purgeIncludeRepos)
 		catalog = append(catalog, strings.Split(purgeIncludeRepos, ",")...)
 	} else {
-		client.RefreshCatalog()
+		if err := client.RefreshCatalog(); err != nil {
+			result.Success = false
+			result.Errors = append(result.Errors, fmt.Sprintf("catalog error: %v", err))
+			result.FinishedAt = time.Now().UTC()
+			return result
+		}
 		catalog = client.GetRepos()
 	}
 	if purgeExcludeRepos != "" {
@@ -162,30 +213,48 @@ func RunPurgeOldTags(client PurgeClient, purgeDryRun bool, purgeIncludeRepos, pu
 	now := time.Now().UTC()
 	repos := map[string]timeSlice{}
 	imageSizes := map[string]int64{}
+	snapshots := map[string]map[string]string{}
 	for _, repo := range catalog {
-		tags := client.FetchAndCacheTagsForRepo(repo)
+		tags, err := client.FetchTagsForPurge(repo)
+		if err != nil {
+			result.Success = false
+			result.Errors = append(result.Errors, fmt.Sprintf("%s tag listing error: %v", repo, err))
+			continue
+		}
 		if len(tags) == 0 {
 			continue
 		}
+		snapshot := map[string]string{}
+		valid := true
 		logger.Infof("[%s] scanning %d tags...", repo, len(tags))
 		for _, tag := range tags {
 			imageRef := repo + ":" + tag
-			imageInfo, err := client.GetImageInfo(imageRef)
+			imageInfo, err := client.GetPurgeImageInfo(imageRef)
 			if err != nil {
 				logger.Warnf("[%s] cannot read image info for %s: %s", repo, tag, err)
 				result.Success = false
 				result.Errors = append(result.Errors, fmt.Sprintf("%s:%s image info error: %s", repo, tag, err))
+				valid = false
 				continue
 			}
 			created := imageInfo.Created
 			imageSizes[imageRef] = imageInfo.ImageSize
-			if created.IsZero() {
+			if created.IsZero() || imageInfo.ImageRefDigest == "" {
 				// Image manifest with zero creation time
 				logger.Warnf("[%s] tag with zero creation time: %s", repo, tag)
+				result.Success = false
+				result.Errors = append(result.Errors, fmt.Sprintf("%s:%s missing creation time or digest", repo, tag))
+				valid = false
 				continue
 			}
-			repos[repo] = append(repos[repo], TagData{name: tag, created: created})
+			snapshot[tag] = imageInfo.ImageRefDigest
+			repos[repo] = append(repos[repo], TagData{name: tag, created: created, digest: imageInfo.ImageRefDigest})
 		}
+		if !valid {
+			delete(repos, repo)
+			continue
+		}
+		snapshots[repo] = snapshot
 	}
 
 	logger.Infof("Scanned %d repositories.", len(catalog))
@@ -206,25 +275,20 @@ func RunPurgeOldTags(client PurgeClient, purgeDryRun bool, purgeIncludeRepos, pu
 
 		// Prep the list of tags to preserve if defined in the file
 		tagsFromFile := []string{}
-		for _, i := range dataFromFile.Get(repo).Array() {
+		for _, i := range dataFromFile.Map()[repo].Array() {
 			tagsFromFile = append(tagsFromFile, i.String())
 		}
 
 		// Filter out tags
 		for _, tag := range repos[repo] {
-			daysOld := int(now.Sub(tag.created).Hours() / 24)
-			matchByRegexp := false
-			if keepRegexp != "" {
-				matchByRegexp, _ = regexp.MatchString(keepRegexp, tag.name)
-			}
+			matchByRegexp := keepPattern != nil && keepPattern.MatchString(tag.name)
 
-			if daysOld > keepDays && !matchByRegexp && !ItemInSlice(tag.name, tagsFromFile) {
+			if now.Sub(tag.created) > time.Duration(keepDays)*24*time.Hour && !matchByRegexp && !ItemInSlice(tag.name, tagsFromFile) {
 				purgeTags[repo] = append(purgeTags[repo], tag.name)
 			} else {
 				keepTags[repo] = append(keepTags[repo], tag.name)
 			}
 		}
-
 		// Keep minimal count of tags no matter how old they are.
 		if len(keepTags[repo]) < keepCount {
 			// At least "threshold"-"keep" but not more than available for "purge".
@@ -232,6 +296,21 @@ func RunPurgeOldTags(client PurgeClient, purgeDryRun bool, purgeIncludeRepos, pu
 			keepTags[repo] = append(keepTags[repo], purgeTags[repo][:takeFromPurge]...)
 			purgeTags[repo] = purgeTags[repo][takeFromPurge:]
 		}
+		// Digest deletion also removes aliases, including those retained by count.
+		protected := map[string]bool{}
+		for _, tag := range keepTags[repo] {
+			protected[snapshots[repo][tag]] = true
+		}
+		candidates := purgeTags[repo][:0]
+		for _, tag := range purgeTags[repo] {
+			if protected[snapshots[repo][tag]] {
+				logger.Warnf("[%s] keeping %s because its image is shared with a retained tag", repo, tag)
+				keepTags[repo] = append(keepTags[repo], tag)
+				continue
+			}
+			candidates = append(candidates, tag)
+		}
+		purgeTags[repo] = candidates
 
 		for _, tag := range purgeTags[repo] {
 			purgeSizeByRepo[repo] += imageSizes[repo+":"+tag]
@@ -266,18 +345,72 @@ func RunPurgeOldTags(client PurgeClient, purgeDryRun bool, purgeIncludeRepos, pu
 			continue
 		}
 		repoResult := result.Repositories[repo]
+		groups := map[string][]string{}
 		for _, tag := range purgeTags[repo] {
-			if err := client.DeleteTag(repo, tag); err != nil {
+			groups[snapshots[repo][tag]] = append(groups[snapshots[repo][tag]], tag)
+		}
+		// Recheck once per repository to avoid quadratic registry traffic.
+		if err := verifyPurgeSnapshot(client, repo, snapshots[repo]); err != nil {
+			result.Success = false
+			result.Errors = append(result.Errors, fmt.Sprintf("%s verification error: %v", repo, err))
+			continue
+		}
+		for _, digest := range SortedMapKeys(groups) {
+			if err := client.DeletePurgeDigest(repo, digest); err != nil {
 				result.Success = false
-				result.Errors = append(result.Errors, fmt.Sprintf("%s:%s delete error: %s", repo, tag, err))
+				result.Errors = append(result.Errors, fmt.Sprintf("%s:%v delete error: %s", repo, groups[digest], err))
 				continue
 			}
-			result.DeletedTagCount++
-			repoResult.DeletedTagCount++
+			remaining, err := client.FetchTagsForPurge(repo)
+			if err != nil {
+				result.Success = false
+				result.Errors = append(result.Errors, fmt.Sprintf("%s could not verify deleted tags: %v", repo, err))
+				break
+			}
+			stillPresent := false
+			for _, tag := range groups[digest] {
+				if ItemInSlice(tag, remaining) {
+					stillPresent = true
+				}
+			}
+			if stillPresent {
+				result.Success = false
+				result.Errors = append(result.Errors, fmt.Sprintf("%s tags still present after digest deletion: %v", repo, groups[digest]))
+				break
+			}
+			for _, tag := range groups[digest] {
+				delete(snapshots[repo], tag)
+			}
+			result.DeletedTagCount += len(groups[digest])
+			repoResult.DeletedTagCount += len(groups[digest])
 		}
 		result.Repositories[repo] = repoResult
 	}
 	logger.Info("Done.")
 	result.FinishedAt = time.Now().UTC()
 	return result
+}
+
+func verifyPurgeSnapshot(client PurgeClient, repo string, snapshot map[string]string) error {
+	tags, err := client.FetchTagsForPurge(repo)
+	if err != nil {
+		return err
+	}
+	if len(tags) != len(snapshot) {
+		return fmt.Errorf("tags changed during purge")
+	}
+	for _, tag := range tags {
+		expected, ok := snapshot[tag]
+		if !ok {
+			return fmt.Errorf("tags changed during purge")
+		}
+		info, err := client.GetPurgeImageInfo(repo + ":" + tag)
+		if err != nil {
+			return err
+		}
+		if info.ImageRefDigest != expected {
+			return fmt.Errorf("tag %s changed during purge", tag)
+		}
+	}
+	return nil
 }

@@ -1,0 +1,109 @@
+# 监听地址
+listen_addr: 0.0.0.0:8000
+
+# Registry UI 的基础路径
+uri_base_path: /
+
+# 后台任务配置
+performance:
+  # 目录列表分页大小
+  catalog_page_size: 100
+
+  # 仓库目录刷新间隔（分钟）
+  # 0 表示仅启动时加载一次，不再后台刷新
+  catalog_refresh_interval: 60
+
+  # 标签后台刷新间隔（分钟）
+  # 0 表示禁用后台刷新，浏览时始终在线获取
+  tags_async_refresh_interval: 360
+
+  # 在线实时刷新标签的阈值
+  # 单仓库标签数量不超过该值时，页面加载会实时拉取
+  # 0 表示始终使用缓存
+  tags_online_refresh_max_count: 1000
+
+# Registry 配置
+registry:
+  # Registry 主机名，不带协议，可带端口
+  hostname: registry.jingweizhishan.com
+
+  # 是否允许连接非 HTTPS Registry
+  insecure: false
+
+  # Registry 凭证
+  username: jwht
+  password: 4qBig0zjeTcEPfgcqiKw
+
+  # 如果 password 为空字符串，则从该文件读取密码
+  password_file: /run/secrets/registry_password_file
+
+  # 是否使用 Keychain 认证
+  auth_with_keychain: false
+
+# UI 访问控制
+access_control:
+  # 是否允许所有用户查看事件日志
+  anyone_can_view_events: true
+
+  # 是否允许所有用户删除标签
+  anyone_can_delete_tags: false
+
+  # 内置登录的用户名，或反向代理传入的用户名
+  admins:
+    - admin
+
+# 事件监听配置
+event_listener:
+  # 需要与 Docker Registry notifications 中的 Bearer token 一致
+  bearer_token: change-me-event-token
+
+  # 事件保留天数
+  retention_days: 7
+
+  # 事件及清理记录存储。生产环境需持久化 data 目录
+  database_driver: sqlite3
+  database_location: data/registry_events.db
+
+  # 如果改为 MySQL，可使用下面这种格式
+  # database_driver: mysql
+  # database_location: user:password@tcp(localhost:3306)/docker_events
+
+  # 是否启用旧事件删除
+  deletion_enabled: true
+
+# 标签清理配置
+purge_tags:
+  # 每天 01:00，使用容器时区；部署时设置 TZ=Asia/Shanghai
+  # 仅在一个实例启用，避免多个实例同时清理
+  cron: "0 1 * * *"
+
+  # false 会实际删除；首次部署建议先设为 true 并检查清理日志
+  dry_run: false
+
+  # 清理日志保留天数
+  # 0 表示永久保留
+  log_retention_days: 30
+
+  # 根据镜像创建时间保留 21 天，每个仓库至少保留 10 个标签
+  # 镜像推送或重新打标签的时间不会改变创建时间
+  keep_days: 21
+  keep_count: 10
+
+  # 永久保留 latest；共享同一镜像的其他标签也会保留
+  keep_regexp: '^latest$'
+
+  # 永久保留文件中列出的标签
+  keep_from_file: ""
+
+# UI 登录认证
+auth:
+  enabled: true
+  username: admin
+  password: pBnMQLYFKMNtAUL0cV9V
+  secret: YjGhDEtEJsd8U93wfoWi
+  max_attempts: 5
+  lockout_minutes: 15
+
+# 调试配置
+debug:
+  templates: false

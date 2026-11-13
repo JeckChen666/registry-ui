@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -34,6 +35,7 @@ type Client struct {
 	tagsCache      map[string][]string
 	tagsCacheMux   sync.RWMutex
 	isCatalogReady bool
+	catalogMux     sync.RWMutex
 	nameOptions    []name.Option
 	catalogJobInfo JobInfo
 	tagsJobInfo    JobInfo
@@ -121,7 +123,9 @@ func (c *Client) StartBackgroundJobs() {
 
 }
 
-func (c *Client) RefreshCatalog() {
+func (c *Client) RefreshCatalog() error {
+	c.catalogMux.Lock()
+	defer c.catalogMux.Unlock()
 	ctx := context.Background()
 	start := time.Now()
 	c.logger.Info("[RefreshCatalog] Started reading catalog...")
@@ -129,10 +133,7 @@ func (c *Client) RefreshCatalog() {
 	cat, err := c.puller.Catalogger(ctx, registry)
 	if err != nil {
 		c.logger.Errorf("[RefreshCatalog] Error fetching catalog: %s", err)
-		if !c.isCatalogReady {
-			os.Exit(1)
-		}
-		return
+		return err
 	}
 	repos := []string{}
 	// The library itself does retries under the hood.
@@ -140,35 +141,33 @@ func (c *Client) RefreshCatalog() {
 		data, err := cat.Next(ctx)
 		if err != nil {
 			c.logger.Errorf("[RefreshCatalog] Error listing catalog: %s", err)
+			return err
 		}
 		if data != nil {
 			repos = append(repos, data.Repos...)
-			if !c.isCatalogReady {
-				c.repos = append(c.repos, data.Repos...)
-				c.logger.Debug("[RefreshCatalog] Repo batch received:", data.Repos)
-			}
 		}
 	}
 
-	if len(repos) > 0 {
-		c.repos = repos
-	} else {
-		c.logger.Warn("[RefreshCatalog] Catalog looks empty, preserving previous list if any.")
-	}
+	c.repos = repos
 	c.logger.Debugf("[RefreshCatalog] Catalog: %s", c.repos)
 	c.catalogJobInfo = JobInfo{LastRun: time.Now(), Duration: time.Since(start)}
 	c.logger.Infof("[RefreshCatalog] Job complete (%v): %d repos found", c.catalogJobInfo.Duration, len(c.repos))
 	c.isCatalogReady = true
+	return nil
 }
 
 // IsCatalogReady whether catalog is ready for the first time use
 func (c *Client) IsCatalogReady() bool {
+	c.catalogMux.RLock()
+	defer c.catalogMux.RUnlock()
 	return c.isCatalogReady
 }
 
 // GetRepos get all repos
 func (c *Client) GetRepos() []string {
-	return c.repos
+	c.catalogMux.RLock()
+	defer c.catalogMux.RUnlock()
+	return append([]string(nil), c.repos...)
 }
 
 // GetJobInfo returns the last run info for background jobs.
@@ -208,18 +207,23 @@ func (c *Client) ListTags(repoName string) ([]string, bool) {
 
 // FetchAndCacheTagsForRepo fetch and cache tags for a specific repo
 func (c *Client) FetchAndCacheTagsForRepo(repoName string) []string {
+	tags, _ := c.FetchTagsForPurge(repoName)
+	return tags
+}
+
+func (c *Client) FetchTagsForPurge(repoName string) ([]string, error) {
 	ctx := context.Background()
 
 	repo, err := name.NewRepository(viper.GetString("registry.hostname")+"/"+repoName, c.nameOptions...)
 	if err != nil {
 		c.logger.Errorf("Error creating repo reference for %s: %s", repoName, err)
-		return nil
+		return nil, err
 	}
 
 	tags, err := c.puller.List(ctx, repo)
 	if err != nil {
 		c.logger.Errorf("Error listing tags for repo %s: %s", repoName, err)
-		return nil
+		return nil, err
 	}
 
 	// Update cache
@@ -228,11 +232,19 @@ func (c *Client) FetchAndCacheTagsForRepo(repoName string) []string {
 	c.tagsCacheMux.Unlock()
 
 	c.logger.Debugf("Cached %d tags for repo %s", len(tags), repoName)
-	return tags
+	return tags, nil
 }
 
 // GetImageInfo get image info by the reference - tag name or digest sha256.
 func (c *Client) GetImageInfo(imageRef string) (ImageInfo, error) {
+	return c.getImageInfo(imageRef, false)
+}
+
+func (c *Client) GetPurgeImageInfo(imageRef string) (ImageInfo, error) {
+	return c.getImageInfo(imageRef, true)
+}
+
+func (c *Client) getImageInfo(imageRef string, purge bool) (ImageInfo, error) {
 	ctx := context.Background()
 	ref, err := name.ParseReference(viper.GetString("registry.hostname")+"/"+imageRef, c.nameOptions...)
 	if err != nil {
@@ -257,7 +269,7 @@ func (c *Client) GetImageInfo(imageRef string) (ImageInfo, error) {
 		ii.IsImage = true
 	} else {
 		c.logger.Errorf("Image reference %s is neither Index nor Image", imageRef)
-		return ImageInfo{}, err
+		return ImageInfo{}, fmt.Errorf("unsupported manifest type %s for %s", descr.MediaType, imageRef)
 	}
 
 	// Performance notes:
@@ -302,10 +314,34 @@ func (c *Client) GetImageInfo(imageRef string) (ImageInfo, error) {
 			c.logger.Errorf("Cannot convert descriptor to ImageIndex for image reference %s: %s", imageRef, err)
 			return ImageInfo{}, err
 		}
-		IdxMf, _ := imgIdx.IndexManifest()
+		IdxMf, err := imgIdx.IndexManifest()
+		if err != nil {
+			return ImageInfo{}, err
+		}
 		platforms := []string{}
 		for _, m := range IdxMf.Manifests {
 			platforms = append(platforms, getPlatform(m.Platform))
+			if !purge || !m.MediaType.IsImage() || m.Annotations["vnd.docker.reference.type"] == "attestation-manifest" {
+				continue
+			}
+			img, err := imgIdx.Image(m.Digest)
+			if err != nil {
+				return ImageInfo{}, err
+			}
+			cfg, err := img.ConfigFile()
+			if err != nil {
+				return ImageInfo{}, err
+			}
+			created := cfg.Created.Time
+			if created.IsZero() {
+				created = extractCreatedFromAnnotations(img)
+			}
+			if created.IsZero() {
+				return ImageInfo{}, fmt.Errorf("missing creation time for %s platform %s", imageRef, m.Digest)
+			}
+			if created.After(ii.Created) {
+				ii.Created = created
+			}
 		}
 		ii.Platforms = strings.Join(UniqueSortedSlice(platforms), ", ")
 		ii.Manifest = structToMap(IdxMf)
@@ -440,7 +476,7 @@ func (c *Client) RefreshTags(interval int) {
 	for {
 		start := time.Now()
 		c.logger.Info("[RefreshTags] Started caching tags for all repositories...")
-		for _, r := range c.repos {
+		for _, r := range c.GetRepos() {
 			c.FetchAndCacheTagsForRepo(r)
 		}
 		c.tagsJobInfo = JobInfo{LastRun: time.Now(), Duration: time.Since(start)}
@@ -493,5 +529,20 @@ func (c *Client) DeleteTag(repoPath, tag string) error {
 	c.tagsCacheMux.Unlock()
 
 	c.logger.Infof("Image %s has been successfully deleted.", imageRef)
+	return nil
+}
+
+// DeletePurgeDigest deletes exactly the manifest selected during the purge scan.
+func (c *Client) DeletePurgeDigest(repoPath, digest string) error {
+	ref, err := name.ParseReference(viper.GetString("registry.hostname")+"/"+repoPath+"@"+digest, c.nameOptions...)
+	if err != nil {
+		return err
+	}
+	if err = c.pusher.Delete(context.Background(), ref); err != nil {
+		return err
+	}
+	c.tagsCacheMux.Lock()
+	delete(c.tagsCache, repoPath)
+	c.tagsCacheMux.Unlock()
 	return nil
 }

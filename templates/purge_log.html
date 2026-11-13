@@ -39,7 +39,7 @@
 
 {{if eventsAllowed}}
 <div class="app-alert app-alert-info">
-    预计释放空间按待删镜像大小估算，真实磁盘回收量仍取决于 registry 垃圾回收和共享 layer 情况。
+    候选镜像大小不等于实际回收空间；实际回收量取决于共享镜像层和 Registry 垃圾回收。
 </div>
 
 <section class="content-card">
@@ -54,7 +54,7 @@
                         <th>仓库数</th>
                         <th>候选标签</th>
                         <th>已删除</th>
-                        <th>预计释放空间</th>
+                        <th>候选镜像大小</th>
                         <th>Cron</th>
                         <th>明细</th>
                         <th>错误</th>
