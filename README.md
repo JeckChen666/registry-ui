@@ -15,8 +15,9 @@ Docker image: [quiq/registry-ui](https://hub.docker.com/r/quiq/registry-ui/tags/
 - Built-in tag retention with CLI and in-process cron scheduling
 - Auto-discovery of authentication methods (basic auth, token service, keychain, etc.)
 - Repository list and tags are cached and refreshed in the background
+- React interface built with shadcn/ui and Tailwind CSS
 
-> **Note:** The UI does not handle TLS or authentication. Place it behind a reverse proxy such as nginx, oauth2_proxy, or similar.
+The UI supports optional password authentication. It does not terminate TLS; use a reverse proxy when HTTPS is required.
 
 ### Quick start
 
@@ -35,6 +36,18 @@ Run Registry UI and open http://127.0.0.1:8000 in your browser:
         -e REGISTRY_HOSTNAME=127.0.0.1:5000 \
         -e REGISTRY_INSECURE=true \
         --name registry-ui quiq/registry-ui
+
+### Local development
+
+The Go server serves the built frontend from `static/ui`. Build it before starting the server:
+
+    cd frontend
+    npm ci
+    npm run build
+    cd ..
+    go run . -config-file config.yml
+
+Rebuild the frontend after changing its source. The Docker image builds the frontend automatically; a local Node.js installation is not needed for Docker builds.
 
 ### Configuration
 

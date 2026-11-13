@@ -14,37 +14,39 @@
     </head>
     <body class="app-body">
         <div class="app-shell">
-            <header class="app-header">
-                <div class="container app-header-inner">
+            <aside class="app-header">
+                <div class="app-header-inner">
                     <a class="app-brand" href="{{ basePath }}/">
                         <span class="app-brand-mark"><i class="bi bi-box-seam"></i></span>
                         <span class="app-brand-copy">
-                            <span class="app-brand-title">Registry UI</span>
-                            <span class="app-brand-subtitle">Container Registry Console</span>
+                            <span class="app-brand-title">镜像仓库</span>
+                            <span class="app-brand-subtitle">REGISTRY CONSOLE</span>
                         </span>
                     </a>
-                    <nav class="app-nav" aria-label="Primary">
+                    <nav class="app-nav" aria-label="主导航">
+                        <div class="app-nav-label">工作区</div>
                         <a class="app-nav-link" href="{{ basePath }}/">
                             <i class="bi bi-grid-1x2"></i>
-                            <span>所有仓库</span>
+                            <span>镜像仓库</span>
                         </a>
                         {{if eventsAllowed}}
-                        <a class="app-nav-link" href="{{ basePath }}/__purge-log">
-                            <i class="bi bi-trash3"></i>
-                            <span>清理日志</span>
-                        </a>
                         <a class="app-nav-link" href="{{ basePath }}/__statistics">
-                            <i class="bi bi-bar-chart"></i>
-                            <span>统计信息</span>
+                            <i class="bi bi-activity"></i>
+                            <span>运行概览</span>
+                        </a>
+                        <div class="app-nav-label">系统管理</div>
+                        <a class="app-nav-link" href="{{ basePath }}/__purge-log">
+                            <i class="bi bi-clock-history"></i>
+                            <span>清理记录</span>
                         </a>
                         <a class="app-nav-link" href="{{ basePath }}/__options">
                             <i class="bi bi-sliders"></i>
-                            <span>配置选项</span>
+                            <span>系统配置</span>
                         </a>
                         {{end}}
                     </nav>
                     <div class="app-header-actions">
-                        <button class="btn btn-app-icon" id="darkModeToggle" aria-label="切换暗色模式" type="button">
+                        <button class="btn btn-app-icon" id="darkModeToggle" aria-label="切换暗色模式" title="切换明暗模式" type="button">
                             <i class="bi bi-moon-stars-fill" id="darkModeIcon"></i>
                         </button>
                         {{if user}}
@@ -55,7 +57,7 @@
                         {{end}}
                     </div>
                 </div>
-            </header>
+            </aside>
 
             <main class="app-main flex-grow-1">
                 <div class="container">
@@ -65,16 +67,6 @@
                 </div>
             </main>
 
-            <footer class="app-footer">
-                <div class="container">
-                    <div class="app-footer-inner">
-                        <div class="app-footer-copy">Registry UI v{{version}}</div>
-                        <div class="app-footer-links">
-                            <a href="https://quiq.com" target="_blank" class="text-decoration-none">Quiq Inc.</a>
-                        </div>
-                    </div>
-                </div>
-            </footer>
         </div>
 
         <script type="text/javascript" src="{{ basePath }}/static/js/bootstrap.bundle.min.js"></script>
@@ -92,8 +84,11 @@
 
                 navLinks.forEach(function(link) {
                     const linkPath = new URL(link.href, window.location.origin).pathname.replace(/\/+$/, '') || '/';
-                    if (linkPath === currentPath) {
+                    const rootPath = new URL('{{ basePath }}/', window.location.origin).pathname.replace(/\/+$/, '') || '/';
+                    const isCatalog = linkPath === rootPath && (currentPath === rootPath || !currentPath.slice(rootPath === '/' ? 1 : rootPath.length + 1).startsWith('__'));
+                    if (linkPath === currentPath || isCatalog) {
                         link.classList.add('is-active');
+                        link.setAttribute('aria-current', 'page');
                     }
                 });
 

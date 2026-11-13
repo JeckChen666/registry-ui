@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/CloudyKit/jet/v6"
@@ -18,6 +21,22 @@ type Template struct {
 
 // Render render template.
 func (r *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	if c != nil {
+		vars, _ := data.(jet.VarMap)
+		values := make(map[string]interface{}, len(vars))
+		for key, value := range vars {
+			if value.IsValid() && value.CanInterface() {
+				values[key] = value.Interface()
+			}
+		}
+		basePath := strings.TrimRight(viper.GetString("uri_base_path"), "/")
+		payload, err := json.Marshal(map[string]interface{}{"page": name, "data": values, "basePath": basePath, "registryHost": viper.GetString("registry.hostname"), "version": version})
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintf(w, `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>镜像仓库</title><link rel="stylesheet" href="%s/static/ui/style.css"></head><body><div id="root"></div><script type="application/json" id="app-data">%s</script><script type="module" src="%s/static/ui/app.js"></script></body></html>`, template.HTMLEscapeString(basePath), payload, template.HTMLEscapeString(basePath))
+		return err
+	}
 	t, err := r.View.GetTemplate(name)
 	if err != nil {
 		panic(fmt.Errorf("fatal error template file: %s", err))

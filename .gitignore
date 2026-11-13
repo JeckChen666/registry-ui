@@ -6,3 +6,4 @@ keep_tags.json
 *.exe
 *.exe~
 *.log
+static/ui/

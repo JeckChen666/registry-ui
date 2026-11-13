@@ -7,7 +7,7 @@
 <script type="text/javascript">
     $(document).ready(function() {
         $('[data-bs-toggle=confirmation]').confirmationPopover({
-            title: '确认删除这个镜像标签？',
+            title: '删除会同时影响指向同一镜像的其他标签，确认继续？',
             btnOkText: '删除',
             btnCancelText: '取消',
             btnOkClass: 'btn-sm btn-danger',
@@ -20,9 +20,8 @@
 {{block body()}}
 <section class="page-hero">
     <div class="page-title-row">
-        <div class="page-eyebrow">Artifact Details</div>
-        <h1 class="page-title">{{if ii.IsImage}}镜像详情{{end}}{{if ii.IsImageIndex}}镜像索引详情{{end}}</h1>
-        <p class="page-subtitle">查看镜像引用、摘要、平台信息以及底层 manifest 和配置内容。</p>
+        <div class="page-eyebrow">镜像管理 / 标签详情</div>
+        <h1 class="page-title">{{ ii.ImageRefTag }}</h1>
     </div>
     <div class="page-toolbar">
         <nav aria-label="breadcrumb" class="page-toolbar-group page-toolbar-breadcrumb">
@@ -37,7 +36,7 @@
                data-bs-toggle="confirmation"
                class="btn btn-outline-danger"
                role="button">
-                <i class="bi bi-trash me-1"></i>删除镜像
+                <i class="bi bi-trash me-1"></i>删除标签
             </a>
         </div>
         {{end}}
@@ -47,7 +46,6 @@
 <section class="content-card">
     <div class="content-card-header">
         <div>
-            <div class="content-card-eyebrow">Overview</div>
             <h2 class="content-card-title">
                 <i class="bi bi-info-circle"></i>
                 <span>概要信息</span>
@@ -60,32 +58,16 @@
                 <tbody>
                     <tr>
                         <td class="fw-bold text-muted detail-key">镜像引用</td>
-                        <td><code>{{ registryHost }}/{{ repoPath }}</code></td>
+                        <td><div class="reference-copy"><code id="image-reference">{{ registryHost }}/{{ repoPath }}</code><button type="button" class="btn btn-row-action" id="copy-image-reference" title="复制镜像地址" aria-label="复制镜像地址"><i class="bi bi-copy"></i></button><span id="copy-feedback" class="copy-feedback" role="status"></span></div></td>
                     </tr>
                     <tr>
                         <td class="fw-bold text-muted detail-key">当前标签</td>
                         <td><code>{{ ii.ImageRefTag }}</code></td>
                     </tr>
-                    <tr>
-                        <td class="fw-bold text-muted detail-key">摘要</td>
-                        <td>
-                            <a href="{{ basePath }}/{{ ii.ImageRefRepo }}@{{ ii.ImageRefDigest }}" class="list-item-link">
-                                <code class="small">{{ ii.ImageRefDigest }}</code>
-                            </a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold text-muted detail-key">媒体类型</td>
-                        <td><span class="badge bg-secondary">{{ ii.MediaType }}</span></td>
-                    </tr>
                     {{if ii.IsImageIndex}}
                     <tr>
                         <td class="fw-bold text-muted detail-key">子镜像</td>
                         <td><span class="badge bg-info">{{ len(ii.Manifest["manifests"]) }}</span></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold text-muted detail-key">注解数</td>
-                        <td><span class="badge bg-secondary">{{ if isset(ii.Manifest["annotations"]) }}{{ len(ii.Manifest["annotations"]) }}{{ else }}0{{ end }}</span></td>
                     </tr>
                     <tr>
                         <td class="fw-bold text-muted detail-key">平台</td>
@@ -94,16 +76,8 @@
                     {{end}}
                     {{if ii.IsImage}}
                     <tr>
-                        <td class="fw-bold text-muted detail-key">镜像 ID</td>
-                        <td><code class="small">{{ ii.ConfigImageID }}</code></td>
-                    </tr>
-                    <tr>
                         <td class="fw-bold text-muted detail-key">镜像大小</td>
                         <td><span class="badge bg-success">{{ ii.ImageSize|pretty_size }}</span></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold text-muted detail-key">层数</td>
-                        <td><span class="badge bg-info">{{ len(ii.Manifest["layers"]) }}</span></td>
                     </tr>
                     <tr>
                         <td class="fw-bold text-muted detail-key">平台</td>
@@ -113,34 +87,6 @@
                         <td class="fw-bold text-muted detail-key">创建时间</td>
                         <td><span class="text-muted">{{ ii.Created|pretty_time }}</span></td>
                     </tr>
-                    <tr>
-                        <td class="fw-bold text-muted detail-key">系统用户</td>
-                        <td><code class="small">{{ ii.ConfigFile["config"]["User"] }}</code></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold text-muted detail-key">工作目录</td>
-                        <td><code class="small">{{ ii.ConfigFile["config"]["WorkingDir"] }}</code></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold text-muted detail-key">入口命令</td>
-                        <td><code class="small">{{ ii.ConfigFile["config"]["Entrypoint"] }}</code></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold text-muted detail-key">启动命令</td>
-                        <td><code class="small">{{ ii.ConfigFile["config"]["Cmd"] }}</code></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold text-muted detail-key">环境变量</td>
-                        <td><span class="badge bg-secondary">{{ if isset(ii.ConfigFile["config"]["Env"]) }}{{ len(ii.ConfigFile["config"]["Env"]) }}{{ else }}0{{ end }}</span></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold text-muted detail-key">标签元数据</td>
-                        <td><span class="badge bg-secondary">{{ if isset(ii.ConfigFile["config"]["Labels"]) }}{{ len(ii.ConfigFile["config"]["Labels"]) }}{{ else }}0{{ end }}</span></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold text-muted detail-key">RootFS 类型</td>
-                        <td><code class="small">{{ ii.ConfigFile["rootfs"]["type"] }}</code></td>
-                    </tr>
                     {{end}}
                 </tbody>
             </table>
@@ -148,35 +94,54 @@
     </div>
 </section>
 
-<section class="content-card">
-    <div class="content-card-header">
-        <div>
-            <div class="content-card-eyebrow">Manifest</div>
-            <h2 class="content-card-title">
-                <i class="bi bi-file-code"></i>
-                <span>{{if ii.IsImage}}清单{{else}}索引清单{{end}}</span>
-            </h2>
-        </div>
-    </div>
+<details class="content-card technical-details">
+    <summary><i class="bi bi-info-circle"></i> 技术信息</summary>
+    <div class="content-card-body p-0"><div class="table-responsive">
+        <table class="table table-app detail-table mb-0"><tbody>
+            <tr><td class="fw-bold text-muted detail-key">摘要</td><td><code>{{ ii.ImageRefDigest }}</code></td></tr>
+            <tr><td class="fw-bold text-muted detail-key">媒体类型</td><td><code>{{ ii.MediaType }}</code></td></tr>
+            {{if ii.IsImage}}<tr><td class="fw-bold text-muted detail-key">镜像 ID</td><td><code>{{ ii.ConfigImageID }}</code></td></tr>{{end}}
+        </tbody></table>
+    </div></div>
+</details>
+
+<details class="content-card technical-details">
+    <summary><i class="bi bi-file-code"></i> {{if ii.IsImage}}镜像清单{{else}}索引清单{{end}}</summary>
     <div class="content-card-body p-0">
         {{ yield json_to_table() ii.Manifest }}
     </div>
-</section>
+</details>
 
 {{if ii.IsImage}}
-<section class="content-card">
-    <div class="content-card-header">
-        <div>
-            <div class="content-card-eyebrow">Config</div>
-            <h2 class="content-card-title">
-                <i class="bi bi-gear"></i>
-                <span>配置文件</span>
-            </h2>
-        </div>
-    </div>
+<details class="content-card technical-details">
+    <summary><i class="bi bi-gear"></i> 镜像配置</summary>
     <div class="content-card-body p-0">
         {{ yield json_to_table() ii.ConfigFile }}
     </div>
-</section>
+</details>
 {{end}}
+<script>
+    document.getElementById('copy-image-reference').addEventListener('click', async function() {
+        var text = document.getElementById('image-reference').textContent;
+        var feedback = document.getElementById('copy-feedback');
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                var input = document.createElement('textarea');
+                input.value = text;
+                input.style.position = 'fixed';
+                input.style.opacity = '0';
+                document.body.appendChild(input);
+                input.select();
+                var copied = document.execCommand('copy');
+                input.remove();
+                if (!copied) throw new Error('copy failed');
+            }
+            feedback.textContent = '已复制';
+        } catch (error) {
+            feedback.textContent = '复制失败，请手动选择地址';
+        }
+    });
+</script>
 {{end}}

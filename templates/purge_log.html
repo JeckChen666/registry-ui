@@ -4,18 +4,23 @@
 {{block head()}}
 <script type="text/javascript">
     $(document).ready(function() {
-        $('#purge-log-table').DataTable({
-            "pageLength": 10,
+        var table = $('#purge-log-table').DataTable({
+            "pageLength": 25,
+            "pagingType": "simple_numbers",
             "order": [[ 0, 'desc' ]],
             "stateSave": false,
             "dom": "<'row'<'col-sm-12'tr>><'row'<'col-sm-4'i><'col-sm-4 text-center'p><'col-sm-4 text-end'l>>",
             "language": {
                 "emptyTable": "暂无清理记录。",
+                "zeroRecords": "没有找到匹配的清理记录",
+                "lengthMenu": "每页 _MENU_ 条",
+                "paginate": {"next": "下一页", "previous": "上一页"},
                 "info": "显示第 _START_ 至 _END_ 条，共 _TOTAL_ 条",
                 "infoFiltered": "（从 _MAX_ 条中筛选）",
                 "infoEmpty": "显示 0 条记录"
             }
         });
+        $('#purge-search').on('input', function() { table.search(this.value).draw(); });
     });
 </script>
 {{end}}
@@ -24,16 +29,22 @@
 <section class="page-hero">
     <div class="page-title-row">
         <div class="page-eyebrow">Maintenance</div>
-        <h1 class="page-title">清理日志</h1>
+        <h1 class="page-title">清理记录</h1>
         <p class="page-subtitle">审查历史清理任务的执行结果、影响范围与异常信息。</p>
     </div>
     <div class="page-toolbar">
         <nav aria-label="breadcrumb" class="page-toolbar-group page-toolbar-breadcrumb">
             <ol class="breadcrumb mb-0">
                 {{ yield breadcrumb() }}
-                <li class="breadcrumb-item active" aria-current="page"><strong>清理日志</strong></li>
+                <li class="breadcrumb-item active" aria-current="page"><strong>清理记录</strong></li>
             </ol>
         </nav>
+        {{if eventsAllowed}}
+        <div class="page-toolbar-group page-toolbar-search">
+            <label for="purge-search" class="visually-hidden">搜索清理记录</label>
+            <div class="search-input-wrap"><i class="bi bi-search search-input-icon"></i><input type="search" id="purge-search" class="form-control form-control-app" placeholder="搜索清理记录"></div>
+        </div>
+        {{end}}
     </div>
 </section>
 

@@ -1,3 +1,10 @@
+FROM node:24-alpine AS frontend
+WORKDIR /opt/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
 FROM golang:1.25.7-alpine3.23 AS builder
 
 ARG HTTP_PROXY
@@ -41,6 +48,7 @@ RUN apk add --no-cache ca-certificates tzdata && \
 
 ADD templates /opt/templates
 ADD static /opt/static
+COPY --from=frontend /opt/static/ui /opt/static/ui
 ADD config.yml /opt
 COPY --from=builder /opt/registry-ui /opt/
 

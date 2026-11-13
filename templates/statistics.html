@@ -8,14 +8,14 @@
 <section class="page-hero">
     <div class="page-title-row">
         <div class="page-eyebrow">Insights</div>
-        <h1 class="page-title">统计信息</h1>
+        <h1 class="page-title">运行概览</h1>
         <p class="page-subtitle">查看仓库规模、标签密度、后台任务运行情况与定时清理结果。</p>
     </div>
     <div class="page-toolbar">
         <nav aria-label="breadcrumb" class="page-toolbar-group page-toolbar-breadcrumb">
             <ol class="breadcrumb mb-0">
                 {{ yield breadcrumb() }}
-                <li class="breadcrumb-item active" aria-current="page"><strong>统计信息</strong></li>
+                <li class="breadcrumb-item active" aria-current="page"><strong>运行概览</strong></li>
             </ol>
         </nav>
     </div>
@@ -28,16 +28,16 @@
             <span class="metric-card-icon metric-card-icon-primary"><i class="bi bi-folder2"></i></span>
             <span class="metric-card-label">仓库</span>
         </div>
-        <div class="metric-card-value">{{if repoCount > 0}}{{ repoCount }}{{else}}-{{end}}</div>
-        <div class="metric-card-meta">{{if repoCount > 0}}已索引仓库总数{{else}}后台加载中...{{end}}</div>
+        <div class="metric-card-value">{{if isCatalogReady}}{{ repoCount }}{{else}}—{{end}}</div>
+        <div class="metric-card-meta">{{if isCatalogReady}}已索引仓库总数{{else}}后台加载中...{{end}}</div>
     </article>
     <article class="metric-card">
         <div class="metric-card-head">
             <span class="metric-card-icon metric-card-icon-success"><i class="bi bi-tags"></i></span>
             <span class="metric-card-label">标签</span>
         </div>
-        <div class="metric-card-value">{{if tagCount > 0}}{{ tagCount }}{{else}}-{{end}}</div>
-        <div class="metric-card-meta">{{if tagCount > 0}}当前缓存中的镜像标签总数{{else}}后台加载中...{{end}}</div>
+        <div class="metric-card-value">{{ tagCount }}</div>
+        <div class="metric-card-meta">当前缓存中的镜像标签总数</div>
     </article>
     <article class="metric-card">
         <div class="metric-card-head">

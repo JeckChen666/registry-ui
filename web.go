@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -35,6 +36,7 @@ func (a *apiClient) viewCatalog(c echo.Context) error {
 
 	data := a.setUserPermissions(c)
 	data.Set("repoPath", repoPath)
+	data.Set("notice", c.QueryParam("notice"))
 
 	showTags := false
 	showImageInfo := false
@@ -82,13 +84,13 @@ func (a *apiClient) viewCatalog(c echo.Context) error {
 			asyncInterval := viper.GetInt("performance.tags_async_refresh_interval")
 			maxCount := viper.GetInt("performance.tags_online_refresh_max_count")
 			if asyncInterval == 0 {
-				tagsRefreshInfo = "Tags for this repo are refreshed online when browsing."
+				tagsRefreshInfo = "浏览时实时刷新标签。"
 			} else if maxCount == 0 {
-				tagsRefreshInfo = fmt.Sprintf("Tags for this repo are refreshed in the background every %d min.", asyncInterval)
+				tagsRefreshInfo = fmt.Sprintf("标签每 %d 分钟后台刷新一次。", asyncInterval)
 			} else if len(tags) <= maxCount {
-				tagsRefreshInfo = fmt.Sprintf("Tags for this repo are refreshed in the background every %d min and online when browsing.", asyncInterval)
+				tagsRefreshInfo = fmt.Sprintf("浏览时实时刷新标签，也会每 %d 分钟后台刷新。", asyncInterval)
 			} else {
-				tagsRefreshInfo = fmt.Sprintf("Tags for this repo are refreshed in the background every %d min. Online refresh is disabled (tag count exceeds %d).", asyncInterval, maxCount)
+				tagsRefreshInfo = fmt.Sprintf("标签数超过 %d，使用每 %d 分钟刷新的缓存。", maxCount, asyncInterval)
 			}
 		}
 		data.Set("repos", repos)
@@ -98,7 +100,7 @@ func (a *apiClient) viewCatalog(c echo.Context) error {
 		data.Set("tagsRefreshInfo", tagsRefreshInfo)
 		data.Set("tagCounts", a.client.SubRepoTagCounts(repoPath, repos))
 		data.Set("tags", tags)
-		if repoPath != "" && (len(repos) > 0 || len(tags) > 0) {
+		if data["eventsAllowed"].Bool() && repoPath != "" && (len(repos) > 0 || len(tags) > 0) {
 			// Do not show events in the root of catalog.
 			data.Set("events", a.eventListener.GetEvents(repoPath))
 		}
@@ -111,15 +113,23 @@ func (a *apiClient) deleteTag(c echo.Context) error {
 	tag := c.QueryParam("tag")
 
 	data := a.setUserPermissions(c)
+	notice := "delete_denied"
 	if data["deleteAllowed"].Bool() {
-		a.client.DeleteTag(repoPath, tag)
+		if err := a.client.DeleteTag(repoPath, tag); err != nil {
+			notice = "delete_failed"
+		} else {
+			notice = "deleted"
+		}
 	}
-	basePath := viper.GetString("uri_base_path")
-	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s%s", basePath, repoPath))
+	basePath := strings.TrimRight(viper.GetString("uri_base_path"), "/")
+	return c.Redirect(http.StatusSeeOther, basePath+"/"+strings.TrimLeft(repoPath, "/")+"?"+url.Values{"notice": {notice}}.Encode())
 }
 
 func (a *apiClient) viewPurgeLog(c echo.Context) error {
 	data := a.setUserPermissions(c)
+	if !data["eventsAllowed"].Bool() {
+		return c.Render(http.StatusOK, "purge_log.html", data)
+	}
 	data.Set("purgeRuns", a.eventListener.GetPurgeRuns(100))
 	return c.Render(http.StatusOK, "purge_log.html", data)
 }
@@ -127,6 +137,9 @@ func (a *apiClient) viewPurgeLog(c echo.Context) error {
 // viewStatistics view registry statistics.
 func (a *apiClient) viewStatistics(c echo.Context) error {
 	data := a.setUserPermissions(c)
+	if !data["eventsAllowed"].Bool() {
+		return c.Render(http.StatusOK, "statistics.html", data)
+	}
 	data.Set("isCatalogReady", a.client.IsCatalogReady())
 	data.Set("repoCount", len(a.client.GetRepos()))
 	data.Set("tagCount", a.client.GetTotalTagCount())
@@ -148,6 +161,28 @@ type configSection struct {
 // viewOptions view configuration options.
 func (a *apiClient) viewOptions(c echo.Context) error {
 	data := a.setUserPermissions(c)
+	if !data["eventsAllowed"].Bool() {
+		return c.Render(http.StatusOK, "options.html", data)
+	}
+	sectionLabels := map[string]string{
+		"general": "常规", "performance": "后台刷新", "registry": "镜像仓库连接",
+		"access_control": "访问权限", "event_listener": "事件记录", "purge_tags": "自动清理",
+		"auth": "登录认证", "debug": "调试",
+	}
+	optionLabels := map[string]string{
+		"listen_addr": "监听地址", "uri_base_path": "访问路径",
+		"performance.catalog_page_size": "仓库列表分页大小", "performance.catalog_refresh_interval": "仓库刷新间隔（分钟）",
+		"performance.tags_async_refresh_interval": "标签刷新间隔（分钟）", "performance.tags_online_refresh_max_count": "标签实时刷新上限",
+		"registry.hostname": "仓库地址", "registry.insecure": "允许非 HTTPS 连接", "registry.username": "仓库用户名",
+		"registry.password": "仓库密码", "registry.password_file": "密码文件", "registry.auth_with_keychain": "使用系统凭据",
+		"access_control.anyone_can_view_events": "所有用户可查看记录", "access_control.anyone_can_delete_tags": "所有用户可删除标签", "access_control.admins": "管理员",
+		"event_listener.bearer_token": "事件接收令牌", "event_listener.retention_days": "事件保留天数", "event_listener.database_driver": "事件存储类型",
+		"event_listener.database_location": "事件存储位置", "event_listener.deletion_enabled": "自动删除过期事件",
+		"purge_tags.cron": "清理计划", "purge_tags.dry_run": "仅模拟清理", "purge_tags.log_retention_days": "清理记录保留天数",
+		"purge_tags.keep_days": "标签保留天数", "purge_tags.keep_count": "每个仓库最少保留数", "purge_tags.keep_regexp": "永久保留标签规则", "purge_tags.keep_from_file": "保留标签文件",
+		"auth.enabled": "启用登录", "auth.username": "登录用户名", "auth.password": "登录密码", "auth.secret": "会话密钥",
+		"auth.max_attempts": "登录失败次数上限", "auth.lockout_minutes": "登录锁定时长（分钟）", "debug.templates": "模板调试",
+	}
 
 	sensitiveKeys := map[string]bool{
 		"registry.password":                true,
@@ -169,13 +204,31 @@ func (a *apiClient) viewOptions(c echo.Context) error {
 			sort.Strings(keys)
 			for _, k := range keys {
 				val := fmt.Sprintf("%v", nested[k])
+				if enabled, ok := nested[k].(bool); ok {
+					if enabled {
+						val = "已启用"
+					} else {
+						val = "未启用"
+					}
+				}
 				if sensitiveKeys[sectionName+"."+k] {
 					val = "***"
 				}
-				sectionMap[sectionName] = append(sectionMap[sectionName], [2]string{k, val})
+				label := optionLabels[sectionName+"."+k]
+				if label == "" {
+					label = k
+				}
+				if val == "" {
+					val = "—"
+				}
+				sectionMap[sectionName] = append(sectionMap[sectionName], [2]string{label, val})
 			}
 		} else {
-			sectionMap["general"] = append(sectionMap["general"], [2]string{sectionName, fmt.Sprintf("%v", v)})
+			label := optionLabels[sectionName]
+			if label == "" {
+				label = sectionName
+			}
+			sectionMap["general"] = append(sectionMap["general"], [2]string{label, fmt.Sprintf("%v", v)})
 		}
 	}
 
@@ -187,7 +240,11 @@ func (a *apiClient) viewOptions(c echo.Context) error {
 
 	sections := make([]configSection, 0, len(sectionNames))
 	for _, name := range sectionNames {
-		sections = append(sections, configSection{Name: name, Options: sectionMap[name]})
+		label := sectionLabels[name]
+		if label == "" {
+			label = name
+		}
+		sections = append(sections, configSection{Name: label, Options: sectionMap[name]})
 	}
 
 	data.Set("sections", sections)
